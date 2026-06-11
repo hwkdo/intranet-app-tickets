@@ -48,9 +48,26 @@ Zusätzlich in der allgemeinen Admin-Webhook-Übersicht (`/admin/webhooks`), sof
 
 **Wichtig:** Der Webhook-Job läuft über die Queue (`QUEUE_CONNECTION=redis`). Horizon bzw. Queue-Worker müssen laufen, sonst bleibt der Eintrag in `webhook_calls` ohne Benutzer-Benachrichtigung.
 
+## Ticket-Kategorien einrichten
+
+Nach der Migration die Standard-Kategorien seeden:
+
+```bash
+php artisan intranet-app-tickets:seed-categories
+```
+
+Im Admin-Bereich (`/apps/tickets/admin` → Tab **Kategorien**) pro Kategorie den Übertragungsweg konfigurieren:
+
+- **Zammad API:** Zammad-Gruppe aus Dropdown wählen (Gruppen werden per API geladen)
+- **E-Mail:** Zieladresse eintragen (Standard für Moodle)
+- Optional: Genehmigung aktivieren und Genehmigungs-Rollen zuweisen
+
 ## Funktionen
 
-- Ticketliste (offen / geschlossen / alle) per Zammad API
+- Ticketliste (offen / geschlossen / alle) per Zammad API + eigene Anfragen („Zur Genehmigung“)
+- Tickets erstellen mit kategoriespezifischen Flux-Formularen
+- Genehmigungsworkflow mit Rollen pro Kategorie
+- Übertragung per Zammad API oder E-Mail (konfigurierbar pro Kategorie)
 - Ticketdetail mit öffentlichem Verlauf und Bearbeiter-Info
 - Antworten als Kunde (`setOnBehalfOfUser`)
 - Anhang-Download über die App

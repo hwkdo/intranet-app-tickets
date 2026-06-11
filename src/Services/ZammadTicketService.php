@@ -100,6 +100,60 @@ class ZammadTicketService
         return $result;
     }
 
+    /**
+     * @param  list<array{filename: string, data: string, mime-type: string}>  $attachments
+     */
+    public function createTicket(
+        Authenticatable $customer,
+        int $groupId,
+        string $title,
+        string $body,
+        array $attachments = [],
+    ): int {
+        $customerId = $this->userResolver->resolveCustomerId($customer);
+
+        if ($customerId === null) {
+            throw new RuntimeException('Zammad customer mapping not found.');
+        }
+
+        $client = $this->clientFactory->make();
+        $client->setOnBehalfOfUser((string) $customerId);
+
+        $article = [
+            'subject' => $title,
+            'body' => $body,
+            'type' => 'web',
+            'content_type' => 'text/plain',
+            'internal' => false,
+            'created_by_id' => $customerId,
+        ];
+
+        if ($attachments !== []) {
+            $article['attachments'] = $attachments;
+        }
+
+        $ticket = $client->resource(ResourceType::TICKET);
+        $ticket->setValues([
+            'group_id' => $groupId,
+            'title' => $title,
+            'customer_id' => $customerId,
+            'article' => $article,
+        ]);
+        $ticket->save();
+
+        if ($ticket->hasError()) {
+            throw new RuntimeException($ticket->getError() ?? 'Failed to create Zammad ticket.');
+        }
+
+        $ticketId = $ticket->getId();
+
+        if ($ticketId === null) {
+            throw new RuntimeException('Zammad ticket was created without an ID.');
+        }
+
+        return (int) $ticketId;
+    }
+
     public function replyToTicket(Authenticatable $user, int $ticketId, string $body): void
     {
         $ticket = $this->getTicketForUser($user, $ticketId);
@@ -122,6 +176,7 @@ class ZammadTicketService
             'ticket_id' => $ticketId,
             'body' => $body,
             'type' => 'web',
+            'content_type' => 'text/plain',
             'internal' => false,
             'created_by_id' => $customerId,
         ]);

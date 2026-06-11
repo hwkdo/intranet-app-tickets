@@ -12,6 +12,7 @@ state(['activeTab' => 'hintergrundbild']);
     <flux:tab.group>
         <flux:tabs wire:model="activeTab">
             <flux:tab name="hintergrundbild" icon="photo">Hintergrundbild</flux:tab>
+            <flux:tab name="kategorien" icon="tag">Kategorien</flux:tab>
             <flux:tab name="einstellungen" icon="cog-6-tooth">Einstellungen</flux:tab>
             <flux:tab name="statistiken" icon="chart-bar">Statistiken</flux:tab>
         </flux:tabs>
@@ -21,6 +22,12 @@ state(['activeTab' => 'hintergrundbild']);
                 @livewire('intranet-app-base::app-background-image', [
                     'appIdentifier' => 'tickets',
                 ])
+            </div>
+        </flux:tab.panel>
+
+        <flux:tab.panel name="kategorien">
+            <div style="min-height: 400px;">
+                <livewire:apps.tickets.admin.categories />
             </div>
         </flux:tab.panel>
 

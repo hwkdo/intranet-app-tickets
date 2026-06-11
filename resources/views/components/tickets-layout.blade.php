@@ -5,8 +5,19 @@
 ])
 
 @php
+    $canApproveTickets = auth()->check()
+        && app(\Hwkdo\IntranetAppTickets\Services\TicketApprovalService::class)->userCanApproveAny(auth()->user());
+
     $defaultNavItems = [
         ['label' => 'Meine Tickets', 'href' => route('apps.tickets.index'), 'icon' => 'ticket', 'description' => 'Ticketübersicht anzeigen', 'buttonText' => 'Tickets öffnen'],
+        ['label' => 'Neues Ticket', 'href' => route('apps.tickets.create.index'), 'icon' => 'plus-circle', 'description' => 'Support-Ticket erstellen', 'buttonText' => 'Ticket erstellen'],
+        ...($canApproveTickets ? [[
+            'label' => 'Genehmigungen',
+            'href' => route('apps.tickets.approvals.index'),
+            'icon' => 'check-badge',
+            'description' => 'Offene Ticket-Genehmigungen bearbeiten',
+            'buttonText' => 'Genehmigungen öffnen',
+        ]] : []),
         ['label' => 'Meine Einstellungen', 'href' => route('apps.tickets.settings.user'), 'icon' => 'cog-6-tooth', 'description' => 'Persönliche Einstellungen anpassen', 'buttonText' => 'Einstellungen öffnen'],
         ['label' => 'App-Info', 'href' => route('apps.tickets.info'), 'icon' => 'information-circle', 'description' => 'Installierte Version und Release-Historie', 'buttonText' => 'App-Info anzeigen'],
         ['label' => 'Webhooks', 'href' => route('apps.tickets.webhooks.index'), 'icon' => 'bell', 'description' => 'Eingegangene Zammad-Webhooks', 'buttonText' => 'Webhooks öffnen', 'permission' => 'manage-app-tickets'],

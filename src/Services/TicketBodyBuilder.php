@@ -1,0 +1,114 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Hwkdo\IntranetAppTickets\Services;
+
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
+
+class TicketBodyBuilder
+{
+    /**
+     * @param  array<string, mixed>  $formData
+     * @param  list<string>  $excludeKeys
+     */
+    public function build(
+        string $baseContent,
+        array $formData,
+        array $excludeKeys = [],
+        ?Authenticatable $requester = null,
+        ?Authenticatable $onBehalfOf = null,
+        ?Authenticatable $supervisor = null,
+        ?string $standortName = null,
+        ?string $ansprechpartnerName = null,
+    ): string {
+        $body = trim($baseContent);
+
+        $defaultExclude = [
+            'betreff',
+            'betreff2',
+            'inhalt',
+            'ticket_fuer',
+            'on_behalf_of_user_id',
+            'abgestimmt_mit',
+            'geschaeftsbereich',
+            'ansprechpartner',
+            'standort',
+            'attachments',
+            '_token',
+            '_method',
+        ];
+
+        $exclude = array_merge($defaultExclude, $excludeKeys);
+
+        foreach ($formData as $key => $value) {
+            if (in_array($key, $exclude, true) || $value === null || $value === '') {
+                continue;
+            }
+
+            if (is_bool($value)) {
+                $value = $value ? 'Ja' : 'Nein';
+            }
+
+            $label = ucfirst(str_replace('_', ' ', (string) $key));
+            $body = $this->appendLine($body, $label.': '.(string) $value);
+        }
+
+        if ($supervisor instanceof Authenticatable) {
+            $body = $this->appendLine($body, 'Abgestimmt mit: '.$this->userDisplayName($supervisor));
+        }
+
+        if ($onBehalfOf instanceof Authenticatable && $requester instanceof Authenticatable) {
+            $body = $this->appendLine($body, 'Erstellt von: '.$this->userDisplayName($requester));
+            $body = $this->appendLine($body, 'Erstellt für: '.$this->userDisplayName($onBehalfOf));
+        }
+
+        if ($ansprechpartnerName !== null) {
+            $body = $this->appendLine($body, 'Ansprechpartner für Auktionsgut: '.$ansprechpartnerName);
+        }
+
+        if ($standortName !== null) {
+            $body = $this->appendLine($body, 'Standort der Auktionsware: '.$standortName);
+        }
+
+        return $body;
+    }
+
+    public function buildSubject(string $betreff, ?string $betreff2 = null, ?int $requestId = null): string
+    {
+        $subject = $betreff2 !== null && $betreff2 !== ''
+            ? $betreff.' ('.$betreff2.')'
+            : $betreff;
+
+        if ($requestId !== null) {
+            $subject .= ' (#'.$requestId.')';
+        }
+
+        return $subject;
+    }
+
+    private function appendLine(string $body, string $line): string
+    {
+        $line = trim($line);
+
+        if ($line === '') {
+            return $body;
+        }
+
+        if ($body === '') {
+            return $line;
+        }
+
+        return $body."\n\n".$line;
+    }
+
+    private function userDisplayName(Authenticatable $user): string
+    {
+        if ($user instanceof Model && isset($user->name)) {
+            return (string) $user->name;
+        }
+
+        return (string) ($user->email ?? 'Unbekannt');
+    }
+}

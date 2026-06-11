@@ -8,6 +8,7 @@ use Hwkdo\IntranetAppBase\Interfaces\IntranetAppInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesTasksInterface;
 use Hwkdo\IntranetAppTickets\Data\AppSettings;
 use Hwkdo\IntranetAppTickets\Data\UserSettings;
+use Hwkdo\IntranetAppTickets\Tasks\PendingApprovalsTaskProvider;
 use Hwkdo\IntranetAppTickets\Tasks\UnreadTicketsTaskProvider;
 use Illuminate\Support\Collection;
 
@@ -57,6 +58,7 @@ class IntranetAppTickets implements IntranetAppInterface, ProvidesTasksInterface
     {
         return [
             UnreadTicketsTaskProvider::class,
+            PendingApprovalsTaskProvider::class,
         ];
     }
 }
