@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hwkdo\IntranetAppTickets\Services\Dispatchers;
 
 use Hwkdo\IntranetAppTickets\Models\TicketRequest;
+use Hwkdo\IntranetAppTickets\Services\TicketUserZammadTagResolver;
 use Hwkdo\IntranetAppTickets\Services\ZammadTicketService;
 use Hwkdo\IntranetAppTickets\Services\ZammadUserResolver;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -15,6 +16,7 @@ class ZammadTicketDispatcher
     public function __construct(
         private readonly ZammadTicketService $zammadTicketService,
         private readonly ZammadUserResolver $userResolver,
+        private readonly TicketUserZammadTagResolver $tagResolver,
     ) {}
 
     public function dispatch(TicketRequest $ticketRequest): int
@@ -35,13 +37,20 @@ class ZammadTicketDispatcher
             ])
             ->all();
 
-        return $this->zammadTicketService->createTicket(
+        $ticketId = $this->zammadTicketService->createTicket(
             customer: $customer,
             groupId: (int) $category->zammad_group_id,
             title: $ticketRequest->subject,
             body: $ticketRequest->body,
             attachments: $attachmentPayload,
         );
+
+        $this->zammadTicketService->addTagsToTicket(
+            $ticketId,
+            $this->tagResolver->resolveForUser($customer),
+        );
+
+        return $ticketId;
     }
 
     private function resolveCustomer(TicketRequest $ticketRequest): Authenticatable

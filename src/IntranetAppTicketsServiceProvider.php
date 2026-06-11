@@ -17,6 +17,7 @@ use Hwkdo\IntranetAppTickets\Services\TicketDispatchService;
 use Hwkdo\IntranetAppTickets\Services\TicketListService;
 use Hwkdo\IntranetAppTickets\Services\TicketReadStateService;
 use Hwkdo\IntranetAppTickets\Services\TicketSubmissionService;
+use Hwkdo\IntranetAppTickets\Services\TicketUserZammadTagResolver;
 use Hwkdo\IntranetAppTickets\Services\ZammadClientFactory;
 use Hwkdo\IntranetAppTickets\Services\ZammadGroupService;
 use Hwkdo\IntranetAppTickets\Services\ZammadTicketService;
@@ -52,6 +53,7 @@ class IntranetAppTicketsServiceProvider extends PackageServiceProvider
         $this->app->singleton(ZammadClientFactory::class);
         $this->app->singleton(ZammadUserResolver::class);
         $this->app->singleton(ZammadTicketService::class);
+        $this->app->singleton(TicketUserZammadTagResolver::class);
         $this->app->singleton(ZammadGroupService::class);
         $this->app->singleton(TicketBodyBuilder::class);
         $this->app->singleton(TicketAttachmentStorage::class);

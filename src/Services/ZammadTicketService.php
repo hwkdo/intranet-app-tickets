@@ -154,6 +154,34 @@ class ZammadTicketService
         return (int) $ticketId;
     }
 
+    /**
+     * @param  list<string>  $tags
+     */
+    public function addTagsToTicket(int $ticketId, array $tags): void
+    {
+        $tags = collect($tags)
+            ->map(fn (mixed $tag): string => trim((string) $tag))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($tags === []) {
+            return;
+        }
+
+        $client = $this->clientFactory->make();
+        $tagResource = $client->resource(ResourceType::TAG);
+
+        foreach ($tags as $tag) {
+            $result = $tagResource->add($ticketId, $tag, 'Ticket');
+
+            if ($result->hasError()) {
+                throw new RuntimeException($result->getError() ?? 'Failed to add Zammad tag: '.$tag);
+            }
+        }
+    }
+
     public function replyToTicket(Authenticatable $user, int $ticketId, string $body): void
     {
         $ticket = $this->getTicketForUser($user, $ticketId);

@@ -22,6 +22,10 @@ return [
 
     'user_model' => env('INTRANET_APP_TICKETS_USER_MODEL', 'App\\Models\\User'),
 
+    'standort_model' => env('INTRANET_APP_TICKETS_STANDORT_MODEL', 'App\\Models\\Standort'),
+
+    'gvp_model' => env('INTRANET_APP_TICKETS_GVP_MODEL', 'App\\Models\\Gvp'),
+
     'zammad' => [
         'url' => env('ZAMMAD_URL', 'https://ticket.hwkdo.com'),
         'http_token' => env('ZAMMAD_HTTP_TOKEN'),

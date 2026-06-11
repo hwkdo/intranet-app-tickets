@@ -13,6 +13,7 @@ state(['activeTab' => 'hintergrundbild']);
         <flux:tabs wire:model="activeTab">
             <flux:tab name="hintergrundbild" icon="photo">Hintergrundbild</flux:tab>
             <flux:tab name="kategorien" icon="tag">Kategorien</flux:tab>
+            <flux:tab name="tags" icon="bookmark">Zammad-Tags</flux:tab>
             <flux:tab name="einstellungen" icon="cog-6-tooth">Einstellungen</flux:tab>
             <flux:tab name="statistiken" icon="chart-bar">Statistiken</flux:tab>
         </flux:tabs>
@@ -28,6 +29,12 @@ state(['activeTab' => 'hintergrundbild']);
         <flux:tab.panel name="kategorien">
             <div style="min-height: 400px;">
                 <livewire:apps.tickets.admin.categories />
+            </div>
+        </flux:tab.panel>
+
+        <flux:tab.panel name="tags">
+            <div style="min-height: 400px;">
+                <livewire:apps.tickets.admin.tag-settings />
             </div>
         </flux:tab.panel>
 
