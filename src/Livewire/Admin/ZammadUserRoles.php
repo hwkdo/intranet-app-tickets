@@ -402,12 +402,19 @@ class ZammadUserRoles extends Component
     private function toastBulkResult(string $actionLabel, ZammadBulkActionResult $result): void
     {
         $summary = sprintf(
-            '%s: %d erfolgreich, %d fehlgeschlagen, %d übersprungen.',
+            '%s: %d erfolgreich, %d fehlgeschlagen, %d übersprungen (%d verarbeitet).',
             $actionLabel,
             $result->succeeded,
             $result->failed,
             $result->skipped,
+            $result->processed,
         );
+
+        $skipSummary = $result->skipSummary();
+
+        if ($skipSummary !== '') {
+            $summary .= ' Übersprungen: '.$skipSummary.'.';
+        }
 
         if ($result->hasFailures()) {
             $details = collect($result->errors)->take(3)->implode(' ');

@@ -86,6 +86,39 @@ test('resolveCustomerId returns existing mapping without api calls', function ()
     expect($resolver->resolveCustomerId($user))->toBe(55);
 });
 
+test('isStaleZammadUserError detects missing zammad user responses', function (): void {
+    $resolver = new ZammadUserResolver(
+        Mockery::mock(ZammadClientFactory::class),
+        new ZammadUserProfileMapper,
+        app(TicketsAppSettingsStore::class),
+    );
+
+    expect($resolver->isStaleZammadUserError("No such user '1221'"))->toBeTrue()
+        ->and($resolver->isStaleZammadUserError('Not authorized'))->toBeFalse()
+        ->and($resolver->isStaleZammadUserError(null))->toBeFalse();
+});
+
+test('forgetMappingIfStaleUserError removes mapping only for stale user errors', function (): void {
+    $user = User::factory()->create(['email' => 'emily.lenz@hwk-do.de']);
+
+    ZammadUserMapping::query()->create([
+        'user_id' => $user->id,
+        'zammad_customer_id' => 1221,
+        'zammad_email' => 'emily.lenz@hwk-do.de',
+        'resolved_at' => now(),
+    ]);
+
+    $resolver = new ZammadUserResolver(
+        Mockery::mock(ZammadClientFactory::class),
+        new ZammadUserProfileMapper,
+        app(TicketsAppSettingsStore::class),
+    );
+
+    expect($resolver->forgetMappingIfStaleUserError($user, "No such user '1221'"))->toBeTrue()
+        ->and(ZammadUserMapping::query()->where('user_id', $user->id)->exists())->toBeFalse()
+        ->and($resolver->forgetMappingIfStaleUserError($user, 'Not authorized'))->toBeFalse();
+});
+
 test('provisionCustomer creates zammad user and stores mapping', function (): void {
     IntranetAppTicketsSettings::query()->create([
         'version' => 1,

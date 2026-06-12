@@ -110,48 +110,44 @@ class ZammadTicketService
         string $body,
         array $attachments = [],
     ): int {
-        $customerId = $this->userResolver->resolveCustomerId($customer);
+        return $this->withZammadCustomer($customer, function (int $customerId) use ($groupId, $title, $body, $attachments): int {
+            $client = $this->clientFactory->make();
+            $client->setOnBehalfOfUser((string) $customerId);
 
-        if ($customerId === null) {
-            throw new RuntimeException('Zammad customer mapping not found.');
-        }
+            $article = [
+                'subject' => $title,
+                'body' => $body,
+                'type' => 'web',
+                'content_type' => 'text/plain',
+                'internal' => false,
+                'created_by_id' => $customerId,
+            ];
 
-        $client = $this->clientFactory->make();
-        $client->setOnBehalfOfUser((string) $customerId);
+            if ($attachments !== []) {
+                $article['attachments'] = $attachments;
+            }
 
-        $article = [
-            'subject' => $title,
-            'body' => $body,
-            'type' => 'web',
-            'content_type' => 'text/plain',
-            'internal' => false,
-            'created_by_id' => $customerId,
-        ];
+            $ticket = $client->resource(ResourceType::TICKET);
+            $ticket->setValues([
+                'group_id' => $groupId,
+                'title' => $title,
+                'customer_id' => $customerId,
+                'article' => $article,
+            ]);
+            $ticket->save();
 
-        if ($attachments !== []) {
-            $article['attachments'] = $attachments;
-        }
+            if ($ticket->hasError()) {
+                throw new RuntimeException($ticket->getError() ?? 'Failed to create Zammad ticket.');
+            }
 
-        $ticket = $client->resource(ResourceType::TICKET);
-        $ticket->setValues([
-            'group_id' => $groupId,
-            'title' => $title,
-            'customer_id' => $customerId,
-            'article' => $article,
-        ]);
-        $ticket->save();
+            $ticketId = $ticket->getId();
 
-        if ($ticket->hasError()) {
-            throw new RuntimeException($ticket->getError() ?? 'Failed to create Zammad ticket.');
-        }
+            if ($ticketId === null) {
+                throw new RuntimeException('Zammad ticket was created without an ID.');
+            }
 
-        $ticketId = $ticket->getId();
-
-        if ($ticketId === null) {
-            throw new RuntimeException('Zammad ticket was created without an ID.');
-        }
-
-        return (int) $ticketId;
+            return (int) $ticketId;
+        });
     }
 
     /**
@@ -190,29 +186,25 @@ class ZammadTicketService
             throw new RuntimeException('Ticket not found or access denied.');
         }
 
-        $customerId = $this->userResolver->resolveCustomerId($user);
+        $this->withZammadCustomer($user, function (int $customerId) use ($ticketId, $body): void {
+            $client = $this->clientFactory->make();
+            $client->setOnBehalfOfUser((string) $customerId);
 
-        if ($customerId === null) {
-            throw new RuntimeException('Zammad customer mapping not found.');
-        }
+            $article = $client->resource(ResourceType::TICKET_ARTICLE);
+            $article->setValues([
+                'ticket_id' => $ticketId,
+                'body' => $body,
+                'type' => 'web',
+                'content_type' => 'text/plain',
+                'internal' => false,
+                'created_by_id' => $customerId,
+            ]);
+            $article->save();
 
-        $client = $this->clientFactory->make();
-        $client->setOnBehalfOfUser((string) $customerId);
-
-        $article = $client->resource(ResourceType::TICKET_ARTICLE);
-        $article->setValues([
-            'ticket_id' => $ticketId,
-            'body' => $body,
-            'type' => 'web',
-            'content_type' => 'text/plain',
-            'internal' => false,
-            'created_by_id' => $customerId,
-        ]);
-        $article->save();
-
-        if ($article->hasError()) {
-            throw new RuntimeException($article->getError() ?? 'Failed to create ticket article.');
-        }
+            if ($article->hasError()) {
+                throw new RuntimeException($article->getError() ?? 'Failed to create ticket article.');
+            }
+        });
     }
 
     public function getAttachmentContent(Authenticatable $user, int $ticketId, int $articleId, int $attachmentId): ?string
@@ -283,6 +275,38 @@ class ZammadTicketService
         }
 
         return $user->getValues();
+    }
+
+    /**
+     * @template TReturn
+     *
+     * @param  callable(int): TReturn  $callback
+     * @return TReturn
+     */
+    private function withZammadCustomer(Authenticatable $customer, callable $callback): mixed
+    {
+        $customerId = $this->requireCustomerId($customer);
+
+        try {
+            return $callback($customerId);
+        } catch (RuntimeException $exception) {
+            if (! $this->userResolver->forgetMappingIfStaleUserError($customer, $exception->getMessage())) {
+                throw $exception;
+            }
+        }
+
+        return $callback($this->requireCustomerId($customer));
+    }
+
+    private function requireCustomerId(Authenticatable $customer): int
+    {
+        $customerId = $this->userResolver->resolveCustomerId($customer);
+
+        if ($customerId === null) {
+            throw new RuntimeException('Zammad customer mapping not found.');
+        }
+
+        return $customerId;
     }
 
     private function buildSearchQuery(int $customerId, TicketFilterEnum $filter): string

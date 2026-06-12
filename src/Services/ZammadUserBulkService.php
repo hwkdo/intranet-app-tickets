@@ -9,6 +9,7 @@ use Hwkdo\IntranetAppTickets\Support\IntranetUserSearchFilter;
 use Hwkdo\IntranetAppTickets\Support\ZammadUserProfileMapper;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use RuntimeException;
 use Throwable;
 
 class ZammadUserBulkService
@@ -26,16 +27,17 @@ class ZammadUserBulkService
         $result = new ZammadBulkActionResult;
 
         $this->eachActiveUser($search, function (Model $user) use (&$roleMap, &$result): void {
+            $result = $this->incrementProcessed($result);
             $email = $this->profileMapper->resolveEmail($user);
 
             if ($email === null) {
-                $result = $this->incrementSkipped($result);
+                $result = $this->incrementSkipped($result, 'keine_e_mail');
 
                 return;
             }
 
             if ($roleMap->has(mb_strtolower($email))) {
-                $result = $this->incrementSkipped($result);
+                $result = $this->incrementSkipped($result, 'bereits_in_zammad');
 
                 return;
             }
@@ -54,14 +56,19 @@ class ZammadUserBulkService
 
     public function assignIntranetRoleToAllMissing(int $roleId, ?string $search = null): ZammadBulkActionResult
     {
+        if ($roleId <= 0) {
+            throw new RuntimeException('Keine gültige Zammad-Intranet-Rolle konfiguriert (role_id='.$roleId.').');
+        }
+
         $roleMap = $this->userRoleService->getEmailToRoleIdsMap();
         $result = new ZammadBulkActionResult;
 
         $this->eachActiveUser($search, function (Model $user) use ($roleId, &$roleMap, &$result): void {
+            $result = $this->incrementProcessed($result);
             $email = $this->profileMapper->resolveEmail($user);
 
             if ($email === null) {
-                $result = $this->incrementSkipped($result);
+                $result = $this->incrementSkipped($result, 'keine_e_mail');
 
                 return;
             }
@@ -69,25 +76,29 @@ class ZammadUserBulkService
             $normalizedEmail = mb_strtolower($email);
 
             if (! $roleMap->has($normalizedEmail)) {
-                $result = $this->incrementSkipped($result);
+                $result = $this->incrementSkipped($result, 'nicht_in_zammad');
 
                 return;
             }
 
             if ($this->userRoleService->emailHasRole($email, $roleId, $roleMap)) {
-                $result = $this->incrementSkipped($result);
+                $result = $this->incrementSkipped($result, 'rolle_bereits_vorhanden');
 
                 return;
             }
 
             try {
-                $this->userRoleService->assignRoleToUser($user, $roleId);
-                $roleMap = $this->userRoleService->getEmailToRoleIdsMap();
+                $this->userRoleService->assignRoleToUser($user, $roleId, forgetRoleMapCache: false);
+                $roleIds = $roleMap->get($normalizedEmail, []);
+                $roleIds[] = $roleId;
+                $roleMap->put($normalizedEmail, array_values(array_unique($roleIds)));
                 $result = $this->incrementSucceeded($result);
             } catch (Throwable $exception) {
                 $result = $this->incrementFailed($result, $this->userLabel($user), $exception);
             }
         });
+
+        $this->userRoleService->forgetCache();
 
         return $result;
     }
@@ -99,8 +110,7 @@ class ZammadUserBulkService
         /** @var Builder<Model> $query */
         $query = $userModel::query()
             ->aktiv()
-            ->orderBy('nachname')
-            ->orderBy('vorname');
+            ->orderBy('id');
 
         $this->searchFilter->apply($query, $search ?? '');
 
@@ -122,6 +132,18 @@ class ZammadUserBulkService
         return (string) ($user->getAttribute('username') ?? 'Benutzer #'.$user->getKey());
     }
 
+    private function incrementProcessed(ZammadBulkActionResult $result): ZammadBulkActionResult
+    {
+        return new ZammadBulkActionResult(
+            succeeded: $result->succeeded,
+            failed: $result->failed,
+            skipped: $result->skipped,
+            errors: $result->errors,
+            processed: $result->processed + 1,
+            skippedReasons: $result->skippedReasons,
+        );
+    }
+
     private function incrementSucceeded(ZammadBulkActionResult $result): ZammadBulkActionResult
     {
         return new ZammadBulkActionResult(
@@ -129,16 +151,23 @@ class ZammadUserBulkService
             failed: $result->failed,
             skipped: $result->skipped,
             errors: $result->errors,
+            processed: $result->processed,
+            skippedReasons: $result->skippedReasons,
         );
     }
 
-    private function incrementSkipped(ZammadBulkActionResult $result): ZammadBulkActionResult
+    private function incrementSkipped(ZammadBulkActionResult $result, string $reason): ZammadBulkActionResult
     {
+        $skippedReasons = $result->skippedReasons;
+        $skippedReasons[$reason] = ($skippedReasons[$reason] ?? 0) + 1;
+
         return new ZammadBulkActionResult(
             succeeded: $result->succeeded,
             failed: $result->failed,
             skipped: $result->skipped + 1,
             errors: $result->errors,
+            processed: $result->processed,
+            skippedReasons: $skippedReasons,
         );
     }
 
@@ -152,6 +181,8 @@ class ZammadUserBulkService
             failed: $result->failed + 1,
             skipped: $result->skipped,
             errors: $errors,
+            processed: $result->processed,
+            skippedReasons: $result->skippedReasons,
         );
     }
 }

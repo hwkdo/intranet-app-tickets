@@ -83,6 +83,37 @@ class ZammadUserResolver
             ->delete();
     }
 
+    public function isStaleZammadUserError(?string $message): bool
+    {
+        if ($message === null || $message === '') {
+            return false;
+        }
+
+        return preg_match('/No such user/i', $message) === 1;
+    }
+
+    public function forgetMappingIfStaleUserError(Authenticatable $user, ?string $error): bool
+    {
+        if (! $this->isStaleZammadUserError($error)) {
+            return false;
+        }
+
+        $mapping = ZammadUserMapping::query()
+            ->where('user_id', $user->getAuthIdentifier())
+            ->first();
+
+        Log::warning('Stale Zammad user mapping removed after API error', [
+            'user_id' => $user->getAuthIdentifier(),
+            'zammad_customer_id' => $mapping?->zammad_customer_id,
+            'zammad_email' => $mapping?->zammad_email,
+            'error' => $error,
+        ]);
+
+        $this->forgetMapping($user);
+
+        return true;
+    }
+
     private function findZammadUserIdByEmail(string $email): ?int
     {
         $client = $this->clientFactory->make();

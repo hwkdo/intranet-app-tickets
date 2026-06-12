@@ -46,41 +46,59 @@ class ZammadUserRoleService
         return in_array($roleId, $roleIds, true);
     }
 
-    public function assignRoleToUser(Authenticatable $user, int $roleId): void
+    public function assignRoleToUser(Authenticatable $user, int $roleId, bool $forgetRoleMapCache = true): void
     {
-        $zammadUserId = $this->userResolver->resolveCustomerId($user);
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $zammadUserId = $this->userResolver->resolveCustomerId($user);
 
-        if ($zammadUserId === null) {
-            throw new RuntimeException('Für den Benutzer wurde kein Zammad-Konto gefunden.');
-        }
+            if ($zammadUserId === null) {
+                throw new RuntimeException('Für den Benutzer wurde kein Zammad-Konto gefunden.');
+            }
 
-        $client = $this->clientFactory->make();
-        $userResource = $client->resource(ResourceType::USER)->get($zammadUserId);
+            $client = $this->clientFactory->make();
+            $userResource = $client->resource(ResourceType::USER)->get($zammadUserId);
 
-        if ($userResource->hasError() || $userResource->getId() === null) {
-            throw new RuntimeException($userResource->getError() ?? 'Zammad-Benutzer konnte nicht geladen werden.');
-        }
+            if ($userResource->hasError() || $userResource->getId() === null) {
+                $error = $userResource->getError() ?? 'Zammad-Benutzer konnte nicht geladen werden.';
 
-        $roleIds = collect($userResource->getValues()['role_ids'] ?? [])
-            ->map(fn (mixed $id): int => (int) $id)
-            ->filter(fn (int $id): bool => $id > 0)
-            ->values()
-            ->all();
+                if ($attempt === 0 && $this->userResolver->forgetMappingIfStaleUserError($user, $error)) {
+                    continue;
+                }
 
-        if (in_array($roleId, $roleIds, true)) {
+                throw new RuntimeException($error);
+            }
+
+            $roleIds = collect($userResource->getValues()['role_ids'] ?? [])
+                ->map(fn (mixed $id): int => (int) $id)
+                ->filter(fn (int $id): bool => $id > 0)
+                ->values()
+                ->all();
+
+            if (in_array($roleId, $roleIds, true)) {
+                return;
+            }
+
+            $roleIds[] = $roleId;
+
+            $userResource->setValues(['role_ids' => $roleIds]);
+            $userResource->save();
+
+            if ($userResource->hasError()) {
+                $error = $userResource->getError() ?? 'Zammad-Rolle konnte nicht zugewiesen werden.';
+
+                if ($attempt === 0 && $this->userResolver->forgetMappingIfStaleUserError($user, $error)) {
+                    continue;
+                }
+
+                throw new RuntimeException($error);
+            }
+
+            if ($forgetRoleMapCache) {
+                $this->forgetCache();
+            }
+
             return;
         }
-
-        $roleIds[] = $roleId;
-
-        $userResource->setValues(['role_ids' => $roleIds]);
-        $userResource->save();
-
-        if ($userResource->hasError()) {
-            throw new RuntimeException($userResource->getError() ?? 'Zammad-Rolle konnte nicht zugewiesen werden.');
-        }
-
-        $this->forgetCache();
     }
 
     /**
