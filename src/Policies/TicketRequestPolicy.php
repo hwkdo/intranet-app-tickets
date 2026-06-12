@@ -36,4 +36,9 @@ class TicketRequestPolicy
     {
         return $this->approvalService->userCanApproveRequest($user, $ticketRequest);
     }
+
+    public function retryDispatch(Authenticatable $user, TicketRequest $ticketRequest): bool
+    {
+        return $this->approvalService->userCanRetryDispatch($user, $ticketRequest);
+    }
 }

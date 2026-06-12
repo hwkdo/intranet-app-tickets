@@ -69,12 +69,39 @@ Im Admin-Bereich (`/apps/tickets/admin` → Tab **Kategorien**) pro Kategorie de
 - Genehmigungsworkflow mit Rollen pro Kategorie
 - Übertragung per Zammad API oder E-Mail (konfigurierbar pro Kategorie)
 - Ticketdetail mit öffentlichem Verlauf und Bearbeiter-Info
-- Antworten als Kunde (`setOnBehalfOfUser`)
+- Ticket-Erstellung und Antworten als Kunde (`setOnBehalfOfUser`)
+- Admin: Zammad-Intranet-Rolle, Gruppenrechte und Benutzerübersicht (`/apps/tickets/admin` → Tab **Zammad-Benutzer**)
+- Automatische Zammad-Benutzeranlage beim ersten Ticket (Intranet-Daten → Zammad, inkl. Intranet-Rolle)
 - Anhang-Download über die App
 - Webhook-Benachrichtigungen bei Agent-Antworten (Reverb + Task-Badge)
 - Webhook-Übersicht mit Verarbeitungsstatus und Live-Updates per Reverb/Echo
+
+## Zammad API-Token (Berechtigungen)
+
+| Funktion | Zammad-Permission |
+|----------|-------------------|
+| Tickets erstellen / lesen | `ticket.agent` |
+| Benutzer automatisch anlegen + Rolle zuweisen | `admin.user` |
+| Gruppenrechte der Intranet-Rolle pflegen | `admin.role` |
+
+Voraussetzung für Auto-Provisioning: Im Admin-Tab **Zammad-Benutzer** muss eine **Intranet-Benutzer-Rolle** konfiguriert sein (inkl. Gruppenrechte für die Ticket-Kategorien).
 
 ## Berechtigungen
 
 - `see-app-tickets` — App nutzen
 - `manage-app-tickets` — Admin-Bereich
+
+## Tests
+
+Alle Tests liegen im Package unter `tests/` und werden über die Hauptanwendung ausgeführt:
+
+```bash
+php artisan test --compact packages/intranet-app-tickets/tests
+```
+
+Einzelne Suite:
+
+```bash
+php artisan test --compact packages/intranet-app-tickets/tests/Unit
+php artisan test --compact packages/intranet-app-tickets/tests/Feature
+```

@@ -48,11 +48,21 @@ class TicketDispatchService
             ]);
         } catch (Throwable $exception) {
             $ticketRequest->update([
-                'status' => TicketRequestStatus::Failed,
+                'status' => $this->statusAfterDispatchFailure($ticketRequest),
                 'dispatch_error' => $exception->getMessage(),
             ]);
 
             throw $exception;
         }
+    }
+
+    private function statusAfterDispatchFailure(TicketRequest $ticketRequest): TicketRequestStatus
+    {
+        if (in_array($ticketRequest->status, [TicketRequestStatus::Approved, TicketRequestStatus::Failed], true)
+            && $ticketRequest->approved_at !== null) {
+            return TicketRequestStatus::Approved;
+        }
+
+        return TicketRequestStatus::Failed;
     }
 }

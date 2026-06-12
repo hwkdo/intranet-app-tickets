@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hwkdo\IntranetAppTickets;
 
 use Hwkdo\IntranetAppTickets\Commands\SeedTicketCategoriesCommand;
+use Hwkdo\IntranetAppTickets\Livewire\Admin\ZammadUserRoles;
 use Hwkdo\IntranetAppTickets\Models\TicketRequest;
 use Hwkdo\IntranetAppTickets\Models\ZammadWebhookOutcome;
 use Hwkdo\IntranetAppTickets\Policies\TicketRequestPolicy;
@@ -19,14 +20,19 @@ use Hwkdo\IntranetAppTickets\Services\TicketReadStateService;
 use Hwkdo\IntranetAppTickets\Services\TicketSubmissionService;
 use Hwkdo\IntranetAppTickets\Services\TicketUserZammadTagResolver;
 use Hwkdo\IntranetAppTickets\Services\ZammadClientFactory;
+use Hwkdo\IntranetAppTickets\Services\TicketsAppSettingsStore;
 use Hwkdo\IntranetAppTickets\Services\ZammadGroupService;
+use Hwkdo\IntranetAppTickets\Services\ZammadRoleService;
 use Hwkdo\IntranetAppTickets\Services\ZammadTicketService;
 use Hwkdo\IntranetAppTickets\Services\ZammadUserResolver;
+use Hwkdo\IntranetAppTickets\Services\ZammadUserBulkService;
+use Hwkdo\IntranetAppTickets\Services\ZammadUserRoleService;
 use Hwkdo\IntranetAppTickets\Services\ZammadWebhookOutcomeRecorder;
 use Hwkdo\IntranetAppTickets\Webhooks\Jobs\ZammadWebhookJob;
 use Hwkdo\IntranetAppTickets\Webhooks\SignatureValidators\ZammadSignatureValidator;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Livewire;
 use Livewire\Volt\Volt;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -55,6 +61,10 @@ class IntranetAppTicketsServiceProvider extends PackageServiceProvider
         $this->app->singleton(ZammadTicketService::class);
         $this->app->singleton(TicketUserZammadTagResolver::class);
         $this->app->singleton(ZammadGroupService::class);
+        $this->app->singleton(ZammadRoleService::class);
+        $this->app->singleton(ZammadUserRoleService::class);
+        $this->app->singleton(ZammadUserBulkService::class);
+        $this->app->singleton(TicketsAppSettingsStore::class);
         $this->app->singleton(TicketBodyBuilder::class);
         $this->app->singleton(TicketAttachmentStorage::class);
         $this->app->singleton(ZammadTicketDispatcher::class);
@@ -75,6 +85,8 @@ class IntranetAppTicketsServiceProvider extends PackageServiceProvider
 
         $this->app->booted(function () {
             Volt::mount(__DIR__.'/../resources/views/livewire');
+
+            Livewire::component('intranet-app-tickets.admin.zammad-user-roles', ZammadUserRoles::class);
         });
 
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');

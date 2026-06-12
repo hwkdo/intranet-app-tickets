@@ -12,5 +12,7 @@ class AppSettings extends BaseAppSettings
     public function __construct(
         #[Description('Maximale Anzahl von Tickets pro API-Abfrage')]
         public int $maxTicketsPerPage = 100,
+        #[Description('Zammad-Rolle für Intranet-Benutzer (On-Behalf-of Ticket-Erstellung)')]
+        public ?int $zammadIntranetUserRoleId = null,
     ) {}
 }

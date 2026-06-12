@@ -14,6 +14,7 @@ state(['activeTab' => 'hintergrundbild']);
             <flux:tab name="hintergrundbild" icon="photo">Hintergrundbild</flux:tab>
             <flux:tab name="kategorien" icon="tag">Kategorien</flux:tab>
             <flux:tab name="tags" icon="bookmark">Zammad-Tags</flux:tab>
+            <flux:tab name="zammad-benutzer" icon="users">Zammad-Benutzer</flux:tab>
             <flux:tab name="einstellungen" icon="cog-6-tooth">Einstellungen</flux:tab>
             <flux:tab name="statistiken" icon="chart-bar">Statistiken</flux:tab>
         </flux:tabs>
@@ -35,6 +36,12 @@ state(['activeTab' => 'hintergrundbild']);
         <flux:tab.panel name="tags">
             <div style="min-height: 400px;">
                 <livewire:apps.tickets.admin.tag-settings />
+            </div>
+        </flux:tab.panel>
+
+        <flux:tab.panel name="zammad-benutzer">
+            <div id="zammad-users-table" style="min-height: 400px;">
+                @livewire(\Hwkdo\IntranetAppTickets\Livewire\Admin\ZammadUserRoles::class, key('tickets-admin-zammad-users'))
             </div>
         </flux:tab.panel>
 
