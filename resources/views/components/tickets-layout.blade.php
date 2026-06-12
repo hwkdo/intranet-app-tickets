@@ -41,7 +41,6 @@
     :heading="$heading"
     :subheading="$subheading"
     :nav-items="$navItems"
-    :wrap-in-card="! request()->routeIs('apps.tickets.index')"
 >
     {{ $slot }}
 </x-intranet-app-base::app-layout>
