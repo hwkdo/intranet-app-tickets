@@ -16,6 +16,7 @@ class ZammadTicketService
     public function __construct(
         private readonly ZammadClientFactory $clientFactory,
         private readonly ZammadUserResolver $userResolver,
+        private readonly ZammadArticleBodyRenderer $articleBodyRenderer,
     ) {}
 
     /**
@@ -93,7 +94,14 @@ class ZammadTicketService
 
         foreach ($articles as $article) {
             if ($article->getValue('internal') === false) {
-                $result[] = $article->getValues();
+                $values = $article->getValues();
+                $values['body'] = $this->articleBodyRenderer->render(
+                    (string) ($values['body'] ?? ''),
+                    $ticketId,
+                    (int) ($values['id'] ?? 0),
+                    $values['attachments'] ?? [],
+                );
+                $result[] = $values;
             }
         }
 

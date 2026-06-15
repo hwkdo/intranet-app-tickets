@@ -26,9 +26,13 @@ class TicketAttachmentController extends Controller
 
         abort_if($meta === null || $content === null, 404);
 
+        $disposition = str_starts_with($meta['content_type'], 'image/')
+            ? 'inline'
+            : 'attachment';
+
         return response($content, 200, [
             'Content-Type' => $meta['content_type'],
-            'Content-Disposition' => 'attachment; filename="'.$meta['filename'].'"',
+            'Content-Disposition' => $disposition.'; filename="'.$meta['filename'].'"',
         ]);
     }
 }
