@@ -77,7 +77,7 @@ title(fn () => 'Ticket #'.($this->ticket['number'] ?? $this->ticketId));
 <div>
     <x-intranet-app-tickets::tickets-layout
         heading="Ticket #{{ $this->ticket['number'] ?? $ticketId }}"
-        subheading="{{ $this->ticket['title'] ?? '' }}"
+        :subheading="$this->ticket['title'] ?? ''"
     >
         <div class="space-y-6">
             <div class="flex flex-wrap items-center gap-2">
