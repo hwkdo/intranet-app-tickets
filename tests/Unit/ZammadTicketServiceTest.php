@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Hwkdo\IntranetAppTickets\Services\ZammadArticleBodyRenderer;
 use Hwkdo\IntranetAppTickets\Services\ZammadClientFactory;
 use Hwkdo\IntranetAppTickets\Services\ZammadTicketService;
 use Hwkdo\IntranetAppTickets\Services\ZammadUserResolver;
+use Hwkdo\IntranetAppTickets\Support\ZammadTicketSearchQueryBuilder;
 use ZammadAPIClient\Client;
 use ZammadAPIClient\Resource\AbstractResource;
 use ZammadAPIClient\ResourceType;
@@ -43,7 +45,12 @@ test('createTicket acts on behalf of the mapped zammad customer', function (): v
     $factory = Mockery::mock(ZammadClientFactory::class);
     $factory->shouldReceive('make')->once()->andReturn($client);
 
-    $service = new ZammadTicketService($factory, $resolver, new \Hwkdo\IntranetAppTickets\Services\ZammadArticleBodyRenderer);
+    $service = new ZammadTicketService(
+        $factory,
+        $resolver,
+        new ZammadArticleBodyRenderer,
+        new ZammadTicketSearchQueryBuilder,
+    );
 
     expect($service->createTicket($user, 1, 'Betreff', '<p>Inhalt</p>'))->toBe(123);
 });
@@ -84,7 +91,12 @@ test('createTicket retries once after stale zammad user mapping error', function
     $factory = Mockery::mock(ZammadClientFactory::class);
     $factory->shouldReceive('make')->twice()->andReturn($client);
 
-    $service = new ZammadTicketService($factory, $resolver, new \Hwkdo\IntranetAppTickets\Services\ZammadArticleBodyRenderer);
+    $service = new ZammadTicketService(
+        $factory,
+        $resolver,
+        new ZammadArticleBodyRenderer,
+        new ZammadTicketSearchQueryBuilder,
+    );
 
     expect($service->createTicket($user, 1, 'Betreff', 'Inhalt'))->toBe(456);
 });

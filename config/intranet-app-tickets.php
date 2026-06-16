@@ -46,4 +46,6 @@ return [
     ],
 
     'closed_state_ids' => [4, 5],
+
+    'list_per_page' => (int) env('INTRANET_APP_TICKETS_LIST_PER_PAGE', 15),
 ];

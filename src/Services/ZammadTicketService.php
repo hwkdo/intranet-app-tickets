@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hwkdo\IntranetAppTickets\Services;
 
 use Hwkdo\IntranetAppTickets\Enums\TicketFilterEnum;
+use Hwkdo\IntranetAppTickets\Support\ZammadTicketSearchQueryBuilder;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Collection;
 use RuntimeException;
@@ -17,22 +18,34 @@ class ZammadTicketService
         private readonly ZammadClientFactory $clientFactory,
         private readonly ZammadUserResolver $userResolver,
         private readonly ZammadArticleBodyRenderer $articleBodyRenderer,
+        private readonly ZammadTicketSearchQueryBuilder $searchQueryBuilder,
     ) {}
 
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    public function listTicketsForUser(Authenticatable $user, TicketFilterEnum $filter = TicketFilterEnum::Open): Collection
-    {
+    public function listTicketsForUser(
+        Authenticatable $user,
+        TicketFilterEnum $filter = TicketFilterEnum::Open,
+        ?int $page = null,
+        ?int $perPage = null,
+        ?string $search = null,
+    ): Collection {
         $customerId = $this->userResolver->resolveCustomerId($user);
 
         if ($customerId === null) {
             return collect();
         }
 
-        $search = $this->buildSearchQuery($customerId, $filter);
+        $searchQuery = $this->searchQueryBuilder->build($customerId, $filter, $search);
         $client = $this->clientFactory->make();
-        $tickets = $client->resource(ResourceType::TICKET)->search($search);
+        $ticketResource = $client->resource(ResourceType::TICKET);
+
+        if ($page !== null && $perPage !== null) {
+            $tickets = $ticketResource->search($searchQuery, $page, $perPage);
+        } else {
+            $tickets = $ticketResource->search($searchQuery);
+        }
 
         if (! is_array($tickets)) {
             throw new RuntimeException($tickets->getError() ?? 'Zammad ticket search failed.');
@@ -315,29 +328,5 @@ class ZammadTicketService
         }
 
         return $customerId;
-    }
-
-    private function buildSearchQuery(int $customerId, TicketFilterEnum $filter): string
-    {
-        $search = 'customer_id:'.$customerId;
-
-        if ($filter === TicketFilterEnum::Open) {
-            $closedIds = config('intranet-app-tickets.closed_state_ids', [4, 5]);
-
-            foreach ($closedIds as $stateId) {
-                $search .= ' AND !(state_id:'.$stateId.')';
-            }
-        }
-
-        if ($filter === TicketFilterEnum::Closed) {
-            $closedIds = config('intranet-app-tickets.closed_state_ids', [4, 5]);
-            $conditions = collect($closedIds)
-                ->map(fn (int $stateId) => 'state_id:'.$stateId)
-                ->implode(' OR ');
-
-            $search .= ' AND ('.$conditions.')';
-        }
-
-        return $search;
     }
 }
