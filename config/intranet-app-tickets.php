@@ -45,6 +45,19 @@ return [
             : null,
     ],
 
+    /*
+     * Teams-Bot Integration: Erstellung von Tickets aus Microsoft-Teams-Nachrichten.
+     * default_category_slug bestimmt die Kategorie, in der Bot-Tickets angelegt werden.
+     * Kategorien mit Genehmigungspflicht werden aus dem Bot heraus nicht bedient.
+     */
+    'teams_bot' => [
+        'default_category_slug' => env('INTRANET_APP_TICKETS_TEAMS_DEFAULT_CATEGORY', 'it-support'),
+        'ai' => [
+            'langdock_model_fallback' => env('INTRANET_APP_TICKETS_TEAMS_AI_LANGDOCK_MODEL', 'gpt-4o'),
+            'openwebui_model_fallback' => env('INTRANET_APP_TICKETS_TEAMS_AI_OPENWEBUI_MODEL', 'gpt-oss:20b'),
+        ],
+    ],
+
     'closed_state_ids' => [4, 5],
 
     'list_per_page' => (int) env('INTRANET_APP_TICKETS_LIST_PER_PAGE', 15),

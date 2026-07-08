@@ -5,32 +5,37 @@ declare(strict_types=1);
 namespace Hwkdo\IntranetAppTickets;
 
 use Hwkdo\IntranetAppTickets\Commands\SeedTicketCategoriesCommand;
+use Hwkdo\IntranetAppTickets\Listeners\HandleTeamsBotTicketCommand;
 use Hwkdo\IntranetAppTickets\Livewire\Admin\ZammadUserRoles;
 use Hwkdo\IntranetAppTickets\Models\TicketRequest;
 use Hwkdo\IntranetAppTickets\Models\ZammadWebhookOutcome;
 use Hwkdo\IntranetAppTickets\Policies\TicketRequestPolicy;
 use Hwkdo\IntranetAppTickets\Services\Dispatchers\EmailTicketDispatcher;
 use Hwkdo\IntranetAppTickets\Services\Dispatchers\ZammadTicketDispatcher;
+use Hwkdo\IntranetAppTickets\Services\TeamsTicketContentGenerator;
+use Hwkdo\IntranetAppTickets\Services\TeamsTicketQuotedSenderResolver;
 use Hwkdo\IntranetAppTickets\Services\TicketApprovalService;
 use Hwkdo\IntranetAppTickets\Services\TicketAttachmentStorage;
 use Hwkdo\IntranetAppTickets\Services\TicketBodyBuilder;
 use Hwkdo\IntranetAppTickets\Services\TicketDispatchService;
 use Hwkdo\IntranetAppTickets\Services\TicketListService;
 use Hwkdo\IntranetAppTickets\Services\TicketReadStateService;
+use Hwkdo\IntranetAppTickets\Services\TicketsAppSettingsStore;
 use Hwkdo\IntranetAppTickets\Services\TicketSubmissionService;
 use Hwkdo\IntranetAppTickets\Services\TicketUserZammadTagResolver;
 use Hwkdo\IntranetAppTickets\Services\ZammadClientFactory;
-use Hwkdo\IntranetAppTickets\Services\TicketsAppSettingsStore;
 use Hwkdo\IntranetAppTickets\Services\ZammadGroupService;
 use Hwkdo\IntranetAppTickets\Services\ZammadRoleService;
 use Hwkdo\IntranetAppTickets\Services\ZammadTicketService;
-use Hwkdo\IntranetAppTickets\Services\ZammadUserResolver;
 use Hwkdo\IntranetAppTickets\Services\ZammadUserBulkService;
+use Hwkdo\IntranetAppTickets\Services\ZammadUserResolver;
 use Hwkdo\IntranetAppTickets\Services\ZammadUserRoleService;
 use Hwkdo\IntranetAppTickets\Services\ZammadWebhookOutcomeRecorder;
 use Hwkdo\IntranetAppTickets\Webhooks\Jobs\ZammadWebhookJob;
 use Hwkdo\IntranetAppTickets\Webhooks\SignatureValidators\ZammadSignatureValidator;
+use Hwkdo\MsGraphLaravel\Events\TeamsBotMessageReceived;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Livewire\Volt\Volt;
@@ -74,7 +79,9 @@ class IntranetAppTicketsServiceProvider extends PackageServiceProvider
         $this->app->singleton(TicketSubmissionService::class);
         $this->app->singleton(TicketListService::class);
         $this->app->singleton(TicketReadStateService::class);
+        $this->app->singleton(TeamsTicketQuotedSenderResolver::class);
         $this->app->singleton(ZammadWebhookOutcomeRecorder::class);
+        $this->app->singleton(TeamsTicketContentGenerator::class);
 
         $this->registerWebhookConfig();
     }
@@ -105,6 +112,21 @@ class IntranetAppTicketsServiceProvider extends PackageServiceProvider
 
             app(ZammadWebhookOutcomeRecorder::class)->recordReceived((int) $webhookCall->id);
         });
+
+        $this->registerTeamsBotTicketListener();
+    }
+
+    /**
+     * Registriert den Teams-Bot-Listener nur, wenn das ms-graph-laravel Bridge-Event verfügbar ist.
+     * So bleibt die Kopplung optional (kein harter Composer-Zwang zwischen den Packages).
+     */
+    private function registerTeamsBotTicketListener(): void
+    {
+        if (! class_exists(TeamsBotMessageReceived::class)) {
+            return;
+        }
+
+        Event::listen(TeamsBotMessageReceived::class, [HandleTeamsBotTicketCommand::class, 'handle']);
     }
 
     private function registerWebhookConfig(): void

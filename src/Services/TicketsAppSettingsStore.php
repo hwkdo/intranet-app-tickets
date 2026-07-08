@@ -42,6 +42,10 @@ class TicketsAppSettingsStore
         $this->save(new AppSettings(
             maxTicketsPerPage: $current->maxTicketsPerPage,
             zammadIntranetUserRoleId: $roleId,
+            teamsTicketAiEnabled: $current->teamsTicketAiEnabled,
+            teamsTicketAiProvider: $current->teamsTicketAiProvider,
+            teamsTicketAiModelOpenWebUi: $current->teamsTicketAiModelOpenWebUi,
+            teamsTicketAiModelLangdock: $current->teamsTicketAiModelLangdock,
         ));
     }
 }
