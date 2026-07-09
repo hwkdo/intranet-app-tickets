@@ -13,9 +13,9 @@ use Hwkdo\IntranetAppTickets\Data\GeneratedTeamsTicketContent;
 use Hwkdo\IntranetAppTickets\Services\TeamsTicketContentGenerator;
 use Hwkdo\IntranetAppTickets\Services\ZammadTicketService;
 use Hwkdo\IntranetAppTickets\Services\ZammadUserResolver;
-use Hwkdo\MsGraphLaravel\Services\TeamsForwardedMessageSenderLookup;
-use Hwkdo\MsGraphLaravel\Data\TeamsBotIncomingMessage;
-use Hwkdo\MsGraphLaravel\Events\TeamsBotMessageReceived;
+use Hwkdo\MsGraphLaravel\Services\TeamsChatMessageService;
+use Hwkdo\IntranetAppTeamsBot\Data\TeamsBotIncomingMessage;
+use Hwkdo\IntranetAppTeamsBot\Events\TeamsBotMessageReceived;
 use Illuminate\Support\Facades\Queue;
 use Spatie\Permission\Models\Permission;
 
@@ -302,8 +302,8 @@ it('creates a ticket for the original author when graph lookup finds the forward
     $category = TicketCategory::query()->where('slug', 'it-support')->firstOrFail();
     $category->update(['zammad_group_id' => 1]);
 
-    $this->mock(TeamsForwardedMessageSenderLookup::class, function ($mock): void {
-        $mock->shouldReceive('lookup')
+    $this->mock(TeamsChatMessageService::class, function ($mock): void {
+        $mock->shouldReceive('lookupForwardedMessageSender')
             ->once()
             ->with(
                 'azure-max',

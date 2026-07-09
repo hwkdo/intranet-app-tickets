@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTickets\Services;
 
-use Hwkdo\MsGraphLaravel\Services\TeamsChatMessageMediaService;
+use Hwkdo\MsGraphLaravel\Services\TeamsChatMessageService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -12,7 +12,7 @@ use Throwable;
 class TeamsTicketQuotedAttachmentResolver
 {
     public function __construct(
-        private readonly ?TeamsChatMessageMediaService $mediaService = null,
+        private readonly ?TeamsChatMessageService $mediaService = null,
     ) {}
 
     /**
@@ -24,12 +24,12 @@ class TeamsTicketQuotedAttachmentResolver
             return [];
         }
 
-        if (! class_exists(TeamsChatMessageMediaService::class)) {
+        if (! class_exists(TeamsChatMessageService::class)) {
             return [];
         }
 
         try {
-            $service = $this->mediaService ?? app(TeamsChatMessageMediaService::class);
+            $service = $this->mediaService ?? app(TeamsChatMessageService::class);
             $mediaFiles = $service->fetchHostedContents($conversationId, $quotedMessageId);
         } catch (Throwable $exception) {
             Log::warning('Teams-Bot: Anhänge aus zitierter Nachricht konnten nicht geladen werden', [

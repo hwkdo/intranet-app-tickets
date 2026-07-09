@@ -7,7 +7,7 @@ namespace Hwkdo\IntranetAppTickets\Listeners;
 use Hwkdo\IntranetAppTickets\Jobs\CreateTicketFromTeamsMessageJob;
 use Hwkdo\IntranetAppTickets\Services\TeamsTicketCommandParser;
 use Hwkdo\IntranetAppTickets\Services\TeamsTicketMessageContentResolver;
-use Hwkdo\MsGraphLaravel\Events\TeamsBotMessageReceived;
+use Hwkdo\IntranetAppTeamsBot\Events\TeamsBotMessageReceived;
 
 class HandleTeamsBotTicketCommand
 {

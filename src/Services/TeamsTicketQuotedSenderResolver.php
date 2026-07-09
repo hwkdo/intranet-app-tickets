@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTickets\Services;
 
-use Hwkdo\MsGraphLaravel\Services\TeamsForwardedMessageSenderLookup;
+use Hwkdo\MsGraphLaravel\Services\TeamsChatMessageService;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Log;
 
@@ -27,12 +27,12 @@ class TeamsTicketQuotedSenderResolver
             return $customer;
         }
 
-        if (! filled($quotedText) || ! filled($actorAzureUserId) || ! class_exists(TeamsForwardedMessageSenderLookup::class)) {
+        if (! filled($quotedText) || ! filled($actorAzureUserId) || ! class_exists(TeamsChatMessageService::class)) {
             return null;
         }
 
-        $lookup = app(TeamsForwardedMessageSenderLookup::class);
-        $found = $lookup->lookup($actorAzureUserId, $quotedText, $excludeConversationId);
+        $lookup = app(TeamsChatMessageService::class);
+        $found = $lookup->lookupForwardedMessageSender($actorAzureUserId, $quotedText, $excludeConversationId);
 
         if (! filled($found['azureUserId'])) {
             Log::info('Teams-Bot: Kein Original-Absender für Weiterleitung gefunden', [

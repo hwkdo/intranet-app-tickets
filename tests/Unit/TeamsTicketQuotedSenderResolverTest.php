@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Hwkdo\IntranetAppTickets\Services\TeamsTicketQuotedSenderResolver;
 use Hwkdo\IntranetAppTickets\Services\TeamsTicketUserResolver;
-use Hwkdo\MsGraphLaravel\Services\TeamsForwardedMessageSenderLookup;
+use Hwkdo\MsGraphLaravel\Services\TeamsChatMessageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -22,8 +22,8 @@ it('returns the intranet user when azure id is already known', function (): void
         'nachname' => 'Lubritz',
     ]);
 
-    $lookup = $this->mock(TeamsForwardedMessageSenderLookup::class, function ($mock): void {
-        $mock->shouldReceive('lookup')->never();
+    $lookupForwardedMessageSender = $this->mock(TeamsChatMessageService::class, function ($mock): void {
+        $mock->shouldReceive('lookupForwardedMessageSender')->never();
     });
 
     $resolver = new TeamsTicketQuotedSenderResolver(app(TeamsTicketUserResolver::class));
@@ -39,7 +39,7 @@ it('returns the intranet user when azure id is already known', function (): void
     expect($resolved?->getAuthIdentifier())->toBe($user->id);
 });
 
-it('falls back to graph lookup when forward metadata has no sender', function (): void {
+it('falls back to graph lookupForwardedMessageSender when forward metadata has no sender', function (): void {
     $user = User::factory()->create([
         'active' => true,
         'socialite_id' => '9d0ba845-db64-4977-9f43-3a244a4dab1c',
@@ -47,8 +47,8 @@ it('falls back to graph lookup when forward metadata has no sender', function ()
         'nachname' => 'Lubritz',
     ]);
 
-    $this->mock(TeamsForwardedMessageSenderLookup::class, function ($mock): void {
-        $mock->shouldReceive('lookup')
+    $this->mock(TeamsChatMessageService::class, function ($mock): void {
+        $mock->shouldReceive('lookupForwardedMessageSender')
             ->once()
             ->with(
                 'azure-max',
@@ -74,15 +74,15 @@ it('falls back to graph lookup when forward metadata has no sender', function ()
     expect($resolved?->getAuthIdentifier())->toBe($user->id);
 });
 
-it('returns null when graph lookup also fails to find a sender', function (): void {
+it('returns null when graph lookupForwardedMessageSender also fails to find a sender', function (): void {
     User::factory()->create([
         'active' => true,
         'username' => 'max',
         'socialite_id' => 'azure-max',
     ]);
 
-    $this->mock(TeamsForwardedMessageSenderLookup::class, function ($mock): void {
-        $mock->shouldReceive('lookup')
+    $this->mock(TeamsChatMessageService::class, function ($mock): void {
+        $mock->shouldReceive('lookupForwardedMessageSender')
             ->once()
             ->andReturn(['azureUserId' => null, 'displayName' => null]);
     });

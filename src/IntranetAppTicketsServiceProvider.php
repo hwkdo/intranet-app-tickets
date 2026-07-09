@@ -33,7 +33,7 @@ use Hwkdo\IntranetAppTickets\Services\ZammadUserRoleService;
 use Hwkdo\IntranetAppTickets\Services\ZammadWebhookOutcomeRecorder;
 use Hwkdo\IntranetAppTickets\Webhooks\Jobs\ZammadWebhookJob;
 use Hwkdo\IntranetAppTickets\Webhooks\SignatureValidators\ZammadSignatureValidator;
-use Hwkdo\MsGraphLaravel\Events\TeamsBotMessageReceived;
+use Hwkdo\IntranetAppTeamsBot\Events\TeamsBotMessageReceived;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;

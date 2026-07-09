@@ -12,7 +12,7 @@ use Hwkdo\IntranetAppTickets\Services\TeamsTicketQuotedAttachmentResolver;
 use Hwkdo\IntranetAppTickets\Services\TeamsTicketQuotedSenderResolver;
 use Hwkdo\IntranetAppTickets\Services\TeamsTicketUserResolver;
 use Hwkdo\IntranetAppTickets\Services\TicketSubmissionService;
-use Hwkdo\MsGraphLaravel\Interfaces\MsGraphTeamsBotServiceInterface;
+use Hwkdo\IntranetAppTeamsBot\Interfaces\TeamsBotServiceInterface;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -261,13 +261,13 @@ class CreateTicketFromTeamsMessageJob implements ShouldQueue
 
     private function reply(string $text): void
     {
-        if (! interface_exists(MsGraphTeamsBotServiceInterface::class)
-            || ! app()->bound(MsGraphTeamsBotServiceInterface::class)) {
+        if (! interface_exists(TeamsBotServiceInterface::class)
+            || ! app()->bound(TeamsBotServiceInterface::class)) {
             return;
         }
 
         try {
-            app(MsGraphTeamsBotServiceInterface::class)
+            app(TeamsBotServiceInterface::class)
                 ->replyToIncomingTeamsMessage($this->activity, $this->conversationRef, $text);
         } catch (Throwable $exception) {
             Log::warning('Teams-Bot Ticket-Antwort konnte nicht gesendet werden', [

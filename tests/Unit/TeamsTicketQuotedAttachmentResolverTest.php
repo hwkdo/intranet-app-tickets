@@ -3,13 +3,13 @@
 declare(strict_types=1);
 
 use Hwkdo\IntranetAppTickets\Services\TeamsTicketQuotedAttachmentResolver;
-use Hwkdo\MsGraphLaravel\Services\TeamsChatMessageMediaService;
+use Hwkdo\MsGraphLaravel\Services\TeamsChatMessageService;
 use Illuminate\Http\UploadedFile;
 
 it('returns uploaded files from quoted message hosted contents', function (): void {
     $pngBytes = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
 
-    $mediaService = Mockery::mock(TeamsChatMessageMediaService::class);
+    $mediaService = Mockery::mock(TeamsChatMessageService::class);
     $mediaService->shouldReceive('fetchHostedContents')
         ->once()
         ->with('19:chat@thread.v2', '1783060714709')
@@ -33,7 +33,7 @@ it('returns uploaded files from quoted message hosted contents', function (): vo
 });
 
 it('returns empty list when conversation or message id is missing', function (): void {
-    $mediaService = Mockery::mock(TeamsChatMessageMediaService::class);
+    $mediaService = Mockery::mock(TeamsChatMessageService::class);
     $mediaService->shouldNotReceive('fetchHostedContents');
 
     $resolver = new TeamsTicketQuotedAttachmentResolver($mediaService);
@@ -43,7 +43,7 @@ it('returns empty list when conversation or message id is missing', function ():
 });
 
 it('returns empty list when media download fails', function (): void {
-    $mediaService = Mockery::mock(TeamsChatMessageMediaService::class);
+    $mediaService = Mockery::mock(TeamsChatMessageService::class);
     $mediaService->shouldReceive('fetchHostedContents')
         ->once()
         ->andThrow(new RuntimeException('Graph error'));
