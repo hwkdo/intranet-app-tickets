@@ -8,6 +8,7 @@ use Hwkdo\IntranetAppBase\Interfaces\IntranetAppInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesTasksInterface;
 use Hwkdo\IntranetAppTickets\Data\AppSettings;
 use Hwkdo\IntranetAppTickets\Data\UserSettings;
+use Hwkdo\IntranetAppTickets\Mcp\Servers\TicketsServer;
 use Hwkdo\IntranetAppTickets\Tasks\PendingApprovalsTaskProvider;
 use Hwkdo\IntranetAppTickets\Tasks\UnreadTicketsTaskProvider;
 use Illuminate\Support\Collection;
@@ -51,7 +52,12 @@ class IntranetAppTickets implements IntranetAppInterface, ProvidesTasksInterface
 
     public static function mcpServers(): array
     {
-        return [];
+        return [
+            'tickets' => [
+                'class' => TicketsServer::class,
+                'middleware' => ['auth:api'],
+            ],
+        ];
     }
 
     public static function taskProviders(): array

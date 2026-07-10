@@ -10,6 +10,7 @@ Route::webhooks('webhooks/zammad', 'tickets-zammad');
 
 Route::middleware(['web', 'auth', 'can:see-app-tickets'])->group(function () {
     Volt::route('apps/tickets', 'apps.tickets.index')->name('apps.tickets.index');
+    Volt::route('apps/tickets/chat', 'apps.tickets.chat')->name('apps.tickets.chat');
     Volt::route('apps/tickets/create', 'apps.tickets.create.index')->name('apps.tickets.create.index');
     Volt::route('apps/tickets/create/{category}', 'apps.tickets.create.form')->name('apps.tickets.create.form');
     Volt::route('apps/tickets/approvals', 'apps.tickets.approvals.index')->name('apps.tickets.approvals.index');

@@ -11,6 +11,7 @@
     $defaultNavItems = [
         ['label' => 'Meine Tickets', 'href' => route('apps.tickets.index'), 'icon' => 'ticket', 'description' => 'Ticketübersicht anzeigen', 'buttonText' => 'Tickets öffnen'],
         ['label' => 'Neues Ticket', 'href' => route('apps.tickets.create.index'), 'icon' => 'plus-circle', 'description' => 'Support-Ticket erstellen', 'buttonText' => 'Ticket erstellen'],
+        ['label' => 'KI-Chat', 'href' => route('apps.tickets.chat'), 'icon' => 'chat-bubble-left-right', 'description' => 'Tickets mit KI und MCP-Server verwalten', 'buttonText' => 'Chat öffnen'],
         ...($canApproveTickets ? [[
             'label' => 'Genehmigungen',
             'href' => route('apps.tickets.approvals.index'),

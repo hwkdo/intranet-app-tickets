@@ -15,6 +15,7 @@ state(['activeTab' => 'hintergrundbild']);
             <flux:tab name="kategorien" icon="tag">Kategorien</flux:tab>
             <flux:tab name="tags" icon="bookmark">Zammad-Tags</flux:tab>
             <flux:tab name="zammad-benutzer" icon="users">Zammad-Benutzer</flux:tab>
+            <flux:tab name="ki" icon="sparkles">KI</flux:tab>
             <flux:tab name="einstellungen" icon="cog-6-tooth">Einstellungen</flux:tab>
             <flux:tab name="statistiken" icon="chart-bar">Statistiken</flux:tab>
         </flux:tabs>
@@ -45,12 +46,29 @@ state(['activeTab' => 'hintergrundbild']);
             </div>
         </flux:tab.panel>
 
+        <flux:tab.panel name="ki">
+            <div style="min-height: 400px;">
+                <livewire:apps.tickets.admin.ki-einstellungen />
+            </div>
+        </flux:tab.panel>
+
         <flux:tab.panel name="einstellungen">
             <div style="min-height: 400px;">
                 @livewire('intranet-app-base::admin-settings', [
                     'appIdentifier' => 'tickets',
                     'settingsModelClass' => '\Hwkdo\IntranetAppTickets\Models\IntranetAppTicketsSettings',
-                    'appSettingsClass' => '\Hwkdo\IntranetAppTickets\Data\AppSettings'
+                    'appSettingsClass' => '\Hwkdo\IntranetAppTickets\Data\AppSettings',
+                    'excludedKeys' => [
+                        'aiTextProviderOverride',
+                        'aiTextModelOverride',
+                        'aiImageProviderOverride',
+                        'aiImageModelOverride',
+                        'teamsTicketAiEnabled',
+                        'teamsTicketAiProvider',
+                        'teamsTicketAiModelOpenWebUi',
+                        'teamsTicketAiModelLangdock',
+                        'openWebUiModel',
+                    ],
                 ])
             </div>
         </flux:tab.panel>

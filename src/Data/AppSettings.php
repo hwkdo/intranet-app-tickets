@@ -42,6 +42,9 @@ class AppSettings extends BaseAppSettings implements HasAiSettings
 
         #[Description('KI-Bild-Modell überschreiben (leer = Base- bzw. Provider-Default)')]
         public ?string $aiImageModelOverride = null,
+
+        #[Description('OpenWebUI-Modell für den Tickets-KI-Chat (MCP-Server)')]
+        public string $openWebUiModel = 'intranet-app-tickets',
     ) {}
 
     public function textProviderOverride(): ?AiProvider
