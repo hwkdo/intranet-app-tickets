@@ -4,26 +4,23 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTickets\Notifications;
 
+use Hwkdo\IntranetAppBase\Notifications\IntranetNotification;
+use Hwkdo\IntranetAppTickets\IntranetAppTickets;
 use Hwkdo\IntranetAppTickets\Models\TicketRequest;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushMessage;
 
-class TicketRequestRejectedNotification extends Notification implements ShouldQueue
+class TicketRequestRejectedNotification extends IntranetNotification
 {
-    use Queueable;
-
     public function __construct(
         public readonly TicketRequest $ticketRequest,
-    ) {}
+    ) {
+        parent::__construct();
+    }
 
-    /**
-     * @return list<string>
-     */
-    public function via(object $notifiable): array
+    public function typeKey(): string
     {
-        return ['mail', 'database'];
+        return 'tickets.rejected';
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -31,7 +28,6 @@ class TicketRequestRejectedNotification extends Notification implements ShouldQu
         return (new MailMessage)
             ->subject('Ticketanfrage abgelehnt: '.$this->ticketRequest->subject)
             ->line('Ihre Ticketanfrage wurde abgelehnt.')
-            ->line('Begründung: '.$this->ticketRequest->rejection_reason)
             ->action('Anfrage ansehen', route('apps.tickets.requests.show', $this->ticketRequest));
     }
 
@@ -40,11 +36,28 @@ class TicketRequestRejectedNotification extends Notification implements ShouldQu
      */
     public function toArray(object $notifiable): array
     {
+        return $this->inboxPayload(
+            title: 'Ticket abgelehnt: '.$this->ticketRequest->subject,
+            body: 'Ihre Ticketanfrage wurde abgelehnt.',
+            url: route('apps.tickets.requests.show', $this->ticketRequest),
+            appIdentifier: IntranetAppTickets::identifier(),
+        );
+    }
+
+    public function toWebPush(object $notifiable, mixed $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title('Ticket abgelehnt')
+            ->body($this->ticketRequest->subject)
+            ->data(['url' => route('apps.tickets.requests.show', $this->ticketRequest)]);
+    }
+
+    public function toTeams(object $notifiable): array
+    {
         return [
-            'ticket_request_id' => $this->ticketRequest->id,
-            'subject' => $this->ticketRequest->subject,
-            'type' => 'rejected',
-            'rejection_reason' => $this->ticketRequest->rejection_reason,
+            'preview' => 'Ihre Ticketanfrage wurde abgelehnt: '.$this->ticketRequest->subject,
+            'topic' => 'Tickets',
+            'url' => route('apps.tickets.requests.show', $this->ticketRequest),
         ];
     }
 }

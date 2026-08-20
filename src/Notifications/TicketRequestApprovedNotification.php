@@ -4,26 +4,23 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTickets\Notifications;
 
+use Hwkdo\IntranetAppBase\Notifications\IntranetNotification;
+use Hwkdo\IntranetAppTickets\IntranetAppTickets;
 use Hwkdo\IntranetAppTickets\Models\TicketRequest;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushMessage;
 
-class TicketRequestApprovedNotification extends Notification implements ShouldQueue
+class TicketRequestApprovedNotification extends IntranetNotification
 {
-    use Queueable;
-
     public function __construct(
         public readonly TicketRequest $ticketRequest,
-    ) {}
+    ) {
+        parent::__construct();
+    }
 
-    /**
-     * @return list<string>
-     */
-    public function via(object $notifiable): array
+    public function typeKey(): string
     {
-        return ['mail', 'database'];
+        return 'tickets.approved';
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -39,10 +36,28 @@ class TicketRequestApprovedNotification extends Notification implements ShouldQu
      */
     public function toArray(object $notifiable): array
     {
+        return $this->inboxPayload(
+            title: 'Ticket genehmigt: '.$this->ticketRequest->subject,
+            body: 'Ihre Ticketanfrage wurde genehmigt und übermittelt.',
+            url: route('apps.tickets.requests.show', $this->ticketRequest),
+            appIdentifier: IntranetAppTickets::identifier(),
+        );
+    }
+
+    public function toWebPush(object $notifiable, mixed $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title('Ticket genehmigt')
+            ->body($this->ticketRequest->subject)
+            ->data(['url' => route('apps.tickets.requests.show', $this->ticketRequest)]);
+    }
+
+    public function toTeams(object $notifiable): array
+    {
         return [
-            'ticket_request_id' => $this->ticketRequest->id,
-            'subject' => $this->ticketRequest->subject,
-            'type' => 'approved',
+            'preview' => 'Ihre Ticketanfrage wurde genehmigt: '.$this->ticketRequest->subject,
+            'topic' => 'Tickets',
+            'url' => route('apps.tickets.requests.show', $this->ticketRequest),
         ];
     }
 }
