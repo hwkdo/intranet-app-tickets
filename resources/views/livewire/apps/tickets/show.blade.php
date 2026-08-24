@@ -9,11 +9,13 @@ use Illuminate\Support\Facades\Auth;
 use function Livewire\Volt\{computed, mount, on, state, title};
 
 state([
+    'userId' => null,
     'ticketId' => null,
     'replyBody' => '',
 ]);
 
 mount(function (int|string $ticketId, ZammadTicketService $ticketService, TicketReadStateService $readStateService) {
+    $this->userId = Auth::id();
     $this->ticketId = (int) $ticketId;
 
     $ticket = $ticketService->getTicketForUser(Auth::user(), (int) $ticketId);
@@ -59,7 +61,7 @@ $sendReply = function (ZammadTicketService $ticketService) {
     );
 };
 
-on(['echo-private:App.Models.User.'.auth()->id().',.ticket.updated' => function (array $event) {
+on(['echo-private:App.Models.User.{userId},.ticket.updated' => function (array $event) {
     if ((int) ($event['ticket_id'] ?? 0) === (int) $this->ticketId) {
         Flux::toast(
             heading: 'Neues Update',

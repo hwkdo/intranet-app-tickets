@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use function Livewire\Volt\{computed, mount, on, state, title, updated};
 
 state([
+    'userId' => null,
     'filter' => TicketFilterEnum::Open->value,
     'search' => '',
     'zammadMapped' => true,
@@ -86,6 +87,7 @@ $clearSearch = function (): void {
 };
 
 mount(function (ZammadUserResolver $userResolver) {
+    $this->userId = Auth::id();
     $this->zammadMapped = $userResolver->resolveCustomerId(Auth::user()) !== null;
     $this->reloadTicketList();
 });
@@ -99,7 +101,7 @@ updated([
     },
 ]);
 
-on(['echo-private:App.Models.User.'.auth()->id().',.ticket.updated' => function (array $event) {
+on(['echo-private:App.Models.User.{userId},.ticket.updated' => function (array $event) {
     Flux::toast(
         heading: 'Ticket-Update',
         text: 'Neues Update zu Ticket #'.($event['ticket_number'] ?? ''),
