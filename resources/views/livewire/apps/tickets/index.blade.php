@@ -8,6 +8,7 @@ use Hwkdo\IntranetAppTickets\Enums\TicketFilterEnum;
 use Hwkdo\IntranetAppTickets\Enums\TicketListItemType;
 use Hwkdo\IntranetAppTickets\Services\TicketListService;
 use Hwkdo\IntranetAppTickets\Services\ZammadUserResolver;
+use Hwkdo\IntranetAppTickets\Support\TicketTourDemo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use function Livewire\Volt\{computed, mount, on, state, title, updated};
@@ -17,6 +18,8 @@ state([
     'filter' => TicketFilterEnum::Open->value,
     'search' => '',
     'zammadMapped' => true,
+    'tourDemo' => false,
+    'tourDemoHoldLoading' => false,
     /** @var list<array<string, mixed>> */
     'tickets' => [],
     'zammadPage' => 1,
@@ -36,12 +39,13 @@ $resetTicketList = function (): void {
     $this->zammadPage = 1;
     $this->hasMore = true;
     $this->loadingMore = false;
+    $this->tourDemoHoldLoading = false;
 };
 
 $hasActiveSearch = computed(fn (): bool => trim($this->search) !== '');
 
 $loadMoreTickets = function (): void {
-    if ($this->loadingMore || ! $this->hasMore) {
+    if ($this->tourDemoHoldLoading || $this->loadingMore || ! $this->hasMore) {
         return;
     }
 
@@ -51,16 +55,25 @@ $loadMoreTickets = function (): void {
         $existing = collect($this->tickets)
             ->map(fn (array $ticket): TicketListItem => TicketListItem::fromArray($ticket));
 
-        $search = trim($this->search);
+        if ($this->tourDemo || TicketTourDemo::isActive()) {
+            $this->tourDemo = true;
+            $result = TicketTourDemo::fetchNextBatch(
+                $this->zammadPage,
+                $existing,
+                TicketFilterEnum::from($this->filter),
+            );
+        } else {
+            $search = trim($this->search);
 
-        $result = app(TicketListService::class)->fetchNextBatch(
-            user: Auth::user(),
-            filter: TicketFilterEnum::from($this->filter),
-            zammadPage: $this->zammadPage,
-            includeRequests: $this->zammadPage === 1,
-            existingItems: $existing,
-            search: $search === '' ? null : $search,
-        );
+            $result = app(TicketListService::class)->fetchNextBatch(
+                user: Auth::user(),
+                filter: TicketFilterEnum::from($this->filter),
+                zammadPage: $this->zammadPage,
+                includeRequests: $this->zammadPage === 1,
+                existingItems: $existing,
+                search: $search === '' ? null : $search,
+            );
+        }
 
         $this->tickets = [
             ...$this->tickets,
@@ -86,9 +99,50 @@ $clearSearch = function (): void {
     $this->reloadTicketList();
 };
 
+$enableTourDemo = function (): void {
+    TicketTourDemo::enable();
+    $this->tourDemo = true;
+    $this->reloadTicketList();
+};
+
+$refreshTourDemoList = function (): void {
+    if (! TicketTourDemo::isActive()) {
+        return;
+    }
+
+    $this->tourDemo = true;
+    $this->reloadTicketList();
+};
+
+$disableTourDemo = function (): void {
+    TicketTourDemo::disable();
+    $this->tourDemo = false;
+    $this->tourDemoHoldLoading = false;
+    $this->reloadTicketList();
+};
+
+$beginTourInfiniteScrollDemo = function (): void {
+    if (! $this->tourDemo && ! TicketTourDemo::isActive()) {
+        return;
+    }
+
+    $this->tourDemo = true;
+    $this->tourDemoHoldLoading = true;
+};
+
+$endTourInfiniteScrollDemo = function (): void {
+    if (! $this->tourDemoHoldLoading) {
+        return;
+    }
+
+    $this->tourDemoHoldLoading = false;
+    $this->loadMoreTickets();
+};
+
 mount(function (ZammadUserResolver $userResolver) {
     $this->userId = Auth::id();
     $this->zammadMapped = $userResolver->resolveCustomerId(Auth::user()) !== null;
+    $this->tourDemo = TicketTourDemo::isActive();
     $this->reloadTicketList();
 });
 
@@ -97,18 +151,33 @@ updated([
         $this->reloadTicketList();
     },
     'search' => function (): void {
+        if ($this->tourDemo) {
+            return;
+        }
+
         $this->reloadTicketList();
     },
 ]);
 
-on(['echo-private:App.Models.User.{userId},.ticket.updated' => function (array $event) {
-    Flux::toast(
-        heading: 'Ticket-Update',
-        text: 'Neues Update zu Ticket #'.($event['ticket_number'] ?? ''),
-        variant: 'info',
-    );
-    $this->reloadTicketList();
-}]);
+on([
+    'echo-private:App.Models.User.{userId},.ticket.updated' => function (array $event) {
+        Flux::toast(
+            heading: 'Ticket-Update',
+            text: 'Neues Update zu Ticket #'.($event['ticket_number'] ?? ''),
+            variant: 'info',
+        );
+        $this->reloadTicketList();
+    },
+    'tickets-tour-demo-enable' => function () {
+        $this->enableTourDemo();
+    },
+    'tickets-tour-demo-refresh' => function () {
+        $this->refreshTourDemoList();
+    },
+    'tickets-tour-demo-disable' => function () {
+        $this->disableTourDemo();
+    },
+]);
 
 title('Tickets - Übersicht');
 
@@ -116,6 +185,20 @@ title('Tickets - Übersicht');
 
 <div>
     <x-intranet-app-tickets::tickets-layout heading="Meine Tickets" subheading="Tickets einsehen und verwalten">
+        @if ($tourDemo)
+            <flux:callout variant="secondary" icon="map" class="mb-4" data-tour="tickets-demo-banner">
+                <flux:callout.heading>Tour-Demo aktiv</flux:callout.heading>
+                <flux:callout.text>
+                    Die angezeigten Tickets sind Beispieldaten für die Produkt-Tour und werden nicht gespeichert.
+                </flux:callout.text>
+                <x-slot:actions>
+                    <flux:button wire:click="disableTourDemo" size="sm" variant="ghost">
+                        Demo beenden
+                    </flux:button>
+                </x-slot:actions>
+            </flux:callout>
+        @endif
+
         @unless ($zammadMapped)
             <flux:callout variant="warning" icon="exclamation-triangle" class="mb-4">
                 Für Ihr Benutzerkonto wurde kein Zammad-Kunde gefunden. Sie können dennoch Ticketanfragen erstellen und deren Status verfolgen.
@@ -123,7 +206,7 @@ title('Tickets - Übersicht');
         @endunless
 
         <div class="space-y-6">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center" data-tour="tickets-search">
                 <flux:input
                     wire:model.live.debounce.300ms="search"
                     placeholder="Ticketnummer, Betreff, Inhalt …"
@@ -144,7 +227,7 @@ title('Tickets - Übersicht');
             </div>
 
             <flux:tab.group>
-                <div class="flex flex-wrap items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3" data-tour="tickets-tabs">
                     <flux:tabs wire:model.live="filter" class="min-w-0 flex-1">
                         <flux:tab name="open">Offen</flux:tab>
                         <flux:tab name="closed">Geschlossen</flux:tab>
@@ -177,7 +260,7 @@ title('Tickets - Übersicht');
                 @endforeach
             </div>
 
-            <div wire:loading.remove wire:target="filter, search">
+            <div wire:loading.remove wire:target="filter, search" data-tour="tickets-list">
                 @unless ($this->hasAnyTickets)
                     <flux:callout variant="secondary" icon="ticket">
                         @if ($this->hasActiveSearch)
@@ -194,25 +277,31 @@ title('Tickets - Übersicht');
                                 href="{{ $ticket->url }}"
                                 wire:navigate
                                 class="block"
+                                @if ($loop->first) data-tour="tickets-first-card" @endif
                             >
-                                <flux:card class="glass-card cursor-pointer transition hover:border-zinc-400/50">
+                                <flux:card @class([
+                                    'glass-card cursor-pointer transition hover:border-zinc-400/50',
+                                    'ring-2 ring-amber-400/60' => $ticket->isUnread,
+                                ])>
                                     <div class="flex items-start justify-between gap-4">
                                         <div class="min-w-0 flex-1 space-y-1">
                                             <div class="flex flex-wrap items-center gap-2">
                                                 <flux:heading size="sm">#{{ $ticket->number ?? $ticket->id }}</flux:heading>
                                                 @if ($ticket->badge)
-                                                    <flux:badge
-                                                        size="sm"
-                                                        :color="match ($ticket->badge) {
-                                                            'Neu' => 'amber',
-                                                            'Zur Genehmigung' => 'amber',
-                                                            'Abgelehnt' => 'red',
-                                                            'Fehlgeschlagen' => 'red',
-                                                            default => 'zinc',
-                                                        }"
-                                                    >
-                                                        {{ $ticket->badge }}
-                                                    </flux:badge>
+                                                    <span @if ($ticket->badge === 'Neu') data-tour="tickets-unread-badge" @endif>
+                                                        <flux:badge
+                                                            size="sm"
+                                                            :color="match ($ticket->badge) {
+                                                                'Neu' => 'amber',
+                                                                'Zur Genehmigung' => 'amber',
+                                                                'Abgelehnt' => 'red',
+                                                                'Fehlgeschlagen' => 'red',
+                                                                default => 'zinc',
+                                                            }"
+                                                        >
+                                                            {{ $ticket->badge }}
+                                                        </flux:badge>
+                                                    </span>
                                                 @endif
                                                 <flux:badge size="sm">{{ $ticket->statusLabel }}</flux:badge>
                                                 @if ($ticket->type === TicketListItemType::Request)
@@ -231,20 +320,44 @@ title('Tickets - Übersicht');
                         @endforeach
                     </div>
 
-                    @if ($hasMore)
+                    @if ($hasMore || $tourDemoHoldLoading)
                         <div
-                            wire:intersect="loadMoreTickets"
+                            @if (! $tourDemoHoldLoading)
+                                wire:intersect="loadMoreTickets"
+                            @endif
                             wire:key="ticket-list-sentinel"
-                            class="flex justify-center py-6"
+                            @class([
+                                'flex flex-col items-center justify-center gap-2',
+                                'border border-dashed border-zinc-300 py-10 dark:border-zinc-600' => $tourDemo,
+                                'py-6' => ! $tourDemo,
+                            ])
+                            data-tour="tickets-infinite-scroll"
                         >
-                            <div
-                                wire:loading
-                                wire:target="loadMoreTickets"
-                                class="flex items-center gap-2 text-sm text-zinc-500"
-                            >
-                                <flux:icon.loading variant="micro" />
-                                <span>Weitere Tickets laden…</span>
-                            </div>
+                            @if ($tourDemo)
+                                <flux:icon.arrow-down class="size-5 text-zinc-400" />
+                            @endif
+                            @if ($tourDemoHoldLoading)
+                                <div class="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                                    <flux:icon.loading variant="micro" />
+                                    <span>Weitere Tickets laden…</span>
+                                </div>
+                            @else
+                                <div
+                                    wire:loading
+                                    wire:target="loadMoreTickets"
+                                    @class([
+                                        'flex items-center gap-2 text-sm',
+                                        'font-medium text-zinc-700 dark:text-zinc-200' => $tourDemo,
+                                        'text-zinc-500' => ! $tourDemo,
+                                    ])
+                                >
+                                    <flux:icon.loading variant="micro" />
+                                    <span>Weitere Tickets laden…</span>
+                                </div>
+                                <flux:text wire:loading.remove wire:target="loadMoreTickets" class="text-sm text-zinc-500">
+                                    Weiter scrollen für mehr Tickets…
+                                </flux:text>
+                            @endif
                         </div>
                     @endif
                 @endunless

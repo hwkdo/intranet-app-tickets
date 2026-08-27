@@ -26,18 +26,18 @@ title('Neues Ticket');
 
 <div>
     <x-intranet-app-tickets::tickets-layout heading="Neues Ticket" subheading="Ticketart wählen">
-        <div class="mx-auto max-w-2xl space-y-6">
+        <div class="mx-auto max-w-2xl space-y-6" data-tour="tickets-create-categories">
             <flux:callout variant="secondary" icon="information-circle">
                 Wählen Sie die passende Ticketart und füllen anschließend das Formular aus.
             </flux:callout>
 
-            <flux:select wire:model="categorySlug" label="Ticketart" placeholder="Bitte wählen">
+            <flux:select wire:model="categorySlug" label="Ticketart" placeholder="Bitte wählen" data-tour="tickets-category-select">
                 @foreach ($this->categories as $category)
                     <flux:select.option value="{{ $category->slug }}">{{ $category->label }}</flux:select.option>
                 @endforeach
             </flux:select>
 
-            <flux:button wire:click="continue" variant="primary" icon="arrow-right">
+            <flux:button wire:click="continue" variant="primary" icon="arrow-right" data-tour="tickets-category-continue">
                 Weiter zum Formular
             </flux:button>
         </div>

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Hwkdo\IntranetAppTickets;
 
 use Hwkdo\IntranetAppBase\Data\NotificationTypeDefinition;
+use Hwkdo\IntranetAppBase\Data\TourDefinition;
 use Hwkdo\IntranetAppBase\Interfaces\IntranetAppInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesNotificationsInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesTasksInterface;
+use Hwkdo\IntranetAppBase\Interfaces\ProvidesToursInterface;
 use Hwkdo\IntranetAppTickets\Data\AppSettings;
 use Hwkdo\IntranetAppTickets\Data\UserSettings;
 use Hwkdo\IntranetAppTickets\Mcp\Servers\TicketsServer;
@@ -15,7 +17,7 @@ use Hwkdo\IntranetAppTickets\Tasks\PendingApprovalsTaskProvider;
 use Hwkdo\IntranetAppTickets\Tasks\UnreadTicketsTaskProvider;
 use Illuminate\Support\Collection;
 
-class IntranetAppTickets implements IntranetAppInterface, ProvidesNotificationsInterface, ProvidesTasksInterface
+class IntranetAppTickets implements IntranetAppInterface, ProvidesNotificationsInterface, ProvidesTasksInterface, ProvidesToursInterface
 {
     public static function app_name(): string
     {
@@ -97,6 +99,24 @@ class IntranetAppTickets implements IntranetAppInterface, ProvidesNotificationsI
                 description: 'Ihre Ticketanfrage wurde abgelehnt.',
                 mandatory: false,
                 defaultEnabled: true,
+            ),
+        ];
+    }
+
+    public static function tours(): array
+    {
+        return [
+            new TourDefinition(
+                key: 'tickets.onboarding',
+                title: 'Tickets – Einstieg',
+                description: 'Übersicht, Updates, Ticket-Details und neues Ticket erstellen – inkl. Demo-Daten für neue Nutzer.',
+                group: 'app',
+                appIdentifier: self::identifier(),
+                appName: self::app_name(),
+                routeName: 'apps.tickets.index',
+                stepsModule: 'tickets/onboarding',
+                sort: 100,
+                version: 1,
             ),
         ];
     }

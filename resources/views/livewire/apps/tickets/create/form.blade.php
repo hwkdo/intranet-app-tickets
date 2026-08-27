@@ -166,7 +166,7 @@ title(fn () => 'Neues Ticket: '.($this->category->label ?? ''));
         :heading="'Neues Ticket: '.$this->category->label"
         subheading="Formular ausfüllen und absenden"
     >
-        <form wire:submit="submit" class="mx-auto max-w-4xl space-y-6">
+        <form wire:submit="submit" class="mx-auto max-w-4xl space-y-6" data-tour="tickets-create-form">
             @if ($this->category->transmission === TransmissionChannel::Email)
                 <flux:callout variant="info" icon="envelope">
                     Dieses Ticket wird per E-Mail übermittelt.

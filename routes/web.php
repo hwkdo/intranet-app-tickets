@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Hwkdo\IntranetAppTickets\Http\Controllers\TicketAttachmentController;
+use Hwkdo\IntranetAppTickets\Http\Controllers\TicketTourDemoController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -20,6 +21,14 @@ Route::middleware(['web', 'auth', 'can:see-app-tickets'])->group(function () {
     Volt::route('apps/tickets/requests/{ticketRequest}', 'apps.tickets.requests.show')->name('apps.tickets.requests.show');
     Volt::route('apps/tickets/settings/user', 'apps.tickets.settings.user')->name('apps.tickets.settings.user');
     Volt::route('apps/tickets/info', 'apps.tickets.info')->name('apps.tickets.info');
+
+    Route::post('apps/tickets/tour/demo/enable', [TicketTourDemoController::class, 'enable'])
+        ->name('apps.tickets.tour.demo.enable');
+    Route::post('apps/tickets/tour/demo/disable', [TicketTourDemoController::class, 'disable'])
+        ->name('apps.tickets.tour.demo.disable');
+    Route::post('apps/tickets/tour/demo/simulate-update', [TicketTourDemoController::class, 'simulateUpdate'])
+        ->name('apps.tickets.tour.demo.simulate-update');
+
     Volt::route('apps/tickets/{ticketId}', 'apps.tickets.show')
         ->whereNumber('ticketId')
         ->name('apps.tickets.show');

@@ -1,4 +1,4 @@
-<div class="space-y-3">
+<div class="space-y-3" data-tour="tickets-attachments">
     <flux:heading size="sm">Anhänge</flux:heading>
 
     @foreach ($attachments as $index => $attachment)
@@ -28,7 +28,7 @@
         </div>
     @endforeach
 
-    <flux:button type="button" wire:click="addAttachment" variant="ghost" size="sm" icon="plus">
+    <flux:button type="button" wire:click="addAttachment" variant="ghost" size="sm" icon="plus" data-tour="tickets-add-attachment">
         Anhang hinzufügen
     </flux:button>
 

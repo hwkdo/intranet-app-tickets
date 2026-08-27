@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Flux\Flux;
 use Hwkdo\IntranetAppTickets\Services\TicketReadStateService;
 use Hwkdo\IntranetAppTickets\Services\ZammadTicketService;
+use Hwkdo\IntranetAppTickets\Support\TicketTourDemo;
 use Illuminate\Support\Facades\Auth;
 use function Livewire\Volt\{computed, mount, on, state, title};
 
@@ -12,11 +13,17 @@ state([
     'userId' => null,
     'ticketId' => null,
     'replyBody' => '',
+    'tourDemo' => false,
 ]);
 
 mount(function (int|string $ticketId, ZammadTicketService $ticketService, TicketReadStateService $readStateService) {
     $this->userId = Auth::id();
     $this->ticketId = (int) $ticketId;
+    $this->tourDemo = TicketTourDemo::isActive() && TicketTourDemo::isDemoTicketId((int) $ticketId);
+
+    if ($this->tourDemo) {
+        return;
+    }
 
     $ticket = $ticketService->getTicketForUser(Auth::user(), (int) $ticketId);
 
@@ -28,13 +35,32 @@ mount(function (int|string $ticketId, ZammadTicketService $ticketService, Ticket
     $readStateService->markRead(Auth::user(), (int) $ticketId, $lastArticleId !== null ? (int) $lastArticleId : null);
 });
 
-$ticket = computed(fn () => app(ZammadTicketService::class)->getTicketForUser(Auth::user(), (int) $this->ticketId));
+$ticket = computed(function () {
+    if ($this->tourDemo) {
+        return TicketTourDemo::demoTicket((int) $this->ticketId);
+    }
 
-$articles = computed(fn () => collect(
-    app(ZammadTicketService::class)->getPublicArticlesForUser(Auth::user(), (int) $this->ticketId)
-));
+    return app(ZammadTicketService::class)->getTicketForUser(Auth::user(), (int) $this->ticketId);
+});
+
+$articles = computed(function () {
+    if ($this->tourDemo) {
+        return collect(TicketTourDemo::demoArticles((int) $this->ticketId));
+    }
+
+    return collect(
+        app(ZammadTicketService::class)->getPublicArticlesForUser(Auth::user(), (int) $this->ticketId)
+    );
+});
 
 $owner = computed(function () {
+    if ($this->tourDemo) {
+        return [
+            'firstname' => 'Max',
+            'lastname' => 'Mustermann',
+        ];
+    }
+
     $ownerId = $this->ticket['owner_id'] ?? null;
 
     if ($ownerId === null) {
@@ -48,6 +74,18 @@ $sendReply = function (ZammadTicketService $ticketService) {
     $this->validate([
         'replyBody' => ['required', 'string', 'min:1'],
     ]);
+
+    if ($this->tourDemo) {
+        $this->replyBody = '';
+
+        Flux::toast(
+            heading: 'Demo',
+            text: 'In der Tour wird keine echte Antwort gesendet.',
+            variant: 'info',
+        );
+
+        return;
+    }
 
     $ticketService->replyToTicket(Auth::user(), (int) $this->ticketId, $this->replyBody);
 
@@ -81,8 +119,14 @@ title(fn () => 'Ticket #'.($this->ticket['number'] ?? $this->ticketId));
         heading="Ticket #{{ $this->ticket['number'] ?? $ticketId }}"
         :subheading="$this->ticket['title'] ?? ''"
     >
-        <div class="space-y-6">
-            <div class="flex flex-wrap items-center gap-2">
+        @if ($tourDemo)
+            <flux:callout variant="secondary" icon="map" class="mb-4">
+                Demo-Ticket für die Produkt-Tour — Inhalte sind Beispiele.
+            </flux:callout>
+        @endif
+
+        <div class="space-y-6" data-tour="tickets-show">
+            <div class="flex flex-wrap items-center gap-2" data-tour="tickets-show-meta">
                 <flux:badge>{{ $this->ticket['state'] ?? 'unbekannt' }}</flux:badge>
                 @if ($this->owner)
                     <flux:text class="text-sm text-zinc-500">
@@ -91,7 +135,7 @@ title(fn () => 'Ticket #'.($this->ticket['number'] ?? $this->ticketId));
                 @endif
             </div>
 
-            <div class="space-y-4">
+            <div class="space-y-4" data-tour="tickets-show-articles">
                 @foreach ($this->articles as $article)
                     <flux:card wire:key="article-{{ $article['id'] }}" class="glass-card">
                         <div class="space-y-3">
@@ -111,18 +155,24 @@ title(fn () => 'Ticket #'.($this->ticket['number'] ?? $this->ticketId));
                             @if (! empty($article['attachments']))
                                 <div class="flex flex-wrap gap-2">
                                     @foreach ($article['attachments'] as $attachment)
-                                        <flux:button
-                                            size="sm"
-                                            variant="ghost"
-                                            icon="paper-clip"
-                                            :href="route('apps.tickets.attachments.download', [
-                                                'ticketId' => $ticketId,
-                                                'articleId' => $article['id'],
-                                                'attachmentId' => $attachment['id'],
-                                            ])"
-                                        >
-                                            {{ $attachment['filename'] ?? 'Anhang' }}
-                                        </flux:button>
+                                        @if ($tourDemo)
+                                            <flux:badge size="sm" icon="paper-clip">
+                                                {{ $attachment['filename'] ?? 'Anhang' }}
+                                            </flux:badge>
+                                        @else
+                                            <flux:button
+                                                size="sm"
+                                                variant="ghost"
+                                                icon="paper-clip"
+                                                :href="route('apps.tickets.attachments.download', [
+                                                    'ticketId' => $ticketId,
+                                                    'articleId' => $article['id'],
+                                                    'attachmentId' => $attachment['id'],
+                                                ])"
+                                            >
+                                                {{ $attachment['filename'] ?? 'Anhang' }}
+                                            </flux:button>
+                                        @endif
                                     @endforeach
                                 </div>
                             @endif
@@ -131,7 +181,7 @@ title(fn () => 'Ticket #'.($this->ticket['number'] ?? $this->ticketId));
                 @endforeach
             </div>
 
-            <flux:card class="glass-card">
+            <flux:card class="glass-card" data-tour="tickets-reply">
                 <form wire:submit="sendReply" class="space-y-4">
                     <flux:heading size="sm">Antworten</flux:heading>
                     <flux:textarea
@@ -143,7 +193,7 @@ title(fn () => 'Ticket #'.($this->ticket['number'] ?? $this->ticketId));
                         <flux:button variant="ghost" :href="route('apps.tickets.index')" wire:navigate>
                             Zurück zur Übersicht
                         </flux:button>
-                        <flux:button type="submit" variant="primary" wire:loading.attr="disabled">
+                        <flux:button type="submit" variant="primary" wire:loading.attr="disabled" data-tour="tickets-reply-submit">
                             <span wire:loading.remove>Antwort senden</span>
                             <span wire:loading>Wird gesendet...</span>
                         </flux:button>
