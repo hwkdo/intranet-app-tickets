@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTickets\Services;
 
+use Carbon\Carbon;
 use Hwkdo\IntranetAppTickets\Enums\TicketFormType;
 use Hwkdo\IntranetAppTickets\Rules\ValidTicketAttachment;
 use Illuminate\Validation\Rule;
@@ -16,6 +17,10 @@ class TicketFormValidation
      */
     public function filterFormData(TicketFormType $form, array $data): array
     {
+        if ($form === TicketFormType::ItGestuetztePruefung) {
+            $data = $this->combineOptionalDateTimes($data);
+        }
+
         return collect($data)
             ->only($this->persistedFieldKeys($form))
             ->reject(fn (mixed $value): bool => $value === null || $value === '')
@@ -91,6 +96,19 @@ class TicketFormValidation
                 'standort',
                 'ansprechpartner',
             ],
+            TicketFormType::ItGestuetztePruefung => [
+                'betreff',
+                'pruefungstermin_id',
+                'datum',
+                'gewerk',
+                'raeume',
+                'anzahl_teilnehmer',
+                'ansprechpartner',
+                'verwendete_anwendungen',
+                'weitere_wichtige_informationen',
+                'sperre_pruefungsbenutzer_ab',
+                'loeschung_pruefungsbenutzer_ab',
+            ],
         };
     }
 
@@ -154,7 +172,42 @@ class TicketFormValidation
                 'standort' => ['required', 'integer', 'exists:standorts,id'],
                 'ansprechpartner' => ['required', 'integer', 'exists:users,id'],
             ], $this->attachmentRules()),
+            TicketFormType::ItGestuetztePruefung => [
+                'betreff' => ['required', 'string', 'max:200'],
+                'pruefungstermin_id' => ['required', 'integer'],
+                'datum' => ['required', 'date'],
+                'gewerk' => ['required', 'string', 'max:500'],
+                'raeume' => ['required', 'string', 'max:500'],
+                'anzahl_teilnehmer' => ['required', 'integer', 'min:0'],
+                'ansprechpartner' => ['required', 'string', 'max:500'],
+                'verwendete_anwendungen' => ['required', 'string', 'max:3000'],
+                'weitere_wichtige_informationen' => ['nullable', 'string', 'max:3000'],
+                'sperre_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:sperre_pruefungsbenutzer_ab_uhrzeit'],
+                'sperre_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:sperre_pruefungsbenutzer_ab_datum'],
+                'loeschung_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:loeschung_pruefungsbenutzer_ab_uhrzeit'],
+                'loeschung_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:loeschung_pruefungsbenutzer_ab_datum'],
+            ],
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function combineOptionalDateTimes(array $data): array
+    {
+        foreach (['sperre_pruefungsbenutzer_ab', 'loeschung_pruefungsbenutzer_ab'] as $key) {
+            $date = $data[$key.'_datum'] ?? null;
+            $time = $data[$key.'_uhrzeit'] ?? null;
+
+            if (is_string($date) && $date !== '' && is_string($time) && $time !== '') {
+                $data[$key] = Carbon::parse($date.' '.$time)->format('Y-m-d H:i');
+            }
+
+            unset($data[$key.'_datum'], $data[$key.'_uhrzeit']);
+        }
+
+        return $data;
     }
 
     /**

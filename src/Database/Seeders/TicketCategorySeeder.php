@@ -24,6 +24,15 @@ class TicketCategorySeeder extends Seeder
                 'sort_order' => 10,
             ],
             [
+                'slug' => 'it-gestuetzte-pruefung',
+                'label' => 'IT-gestützte Prüfung',
+                'form' => TicketFormType::ItGestuetztePruefung,
+                'transmission' => TransmissionChannel::Zammad,
+                'requires_approval' => false,
+                'legacy_id' => null,
+                'sort_order' => 15,
+            ],
+            [
                 'slug' => 'hausmeisterservice',
                 'label' => 'Hausmeisterservice',
                 'form' => TicketFormType::Hausmeisterservice,

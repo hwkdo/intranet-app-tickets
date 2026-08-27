@@ -72,3 +72,76 @@ test('druckauftrag keeps meisterbrief flag in form data', function (): void {
     expect($filtered)->toHaveKey('meisterbrief')
         ->and($filtered['meisterbrief'])->toBeFalse();
 });
+
+test('it gestuetzte pruefung combines optional date and time fields', function (): void {
+    $validation = app(TicketFormValidation::class);
+
+    $filtered = $validation->filterFormData(TicketFormType::ItGestuetztePruefung, [
+        'betreff' => 'IT-gestützte Prüfung: Test',
+        'pruefungstermin_id' => 1247861,
+        'datum' => '2026-08-27',
+        'gewerk' => 'Maler',
+        'raeume' => '1303, Bildungszentrum HWK Haus I',
+        'anzahl_teilnehmer' => 10,
+        'ansprechpartner' => 'Susanne Potthoff',
+        'verwendete_anwendungen' => 'Moodle',
+        'weitere_wichtige_informationen' => 'Namensschilder vorhanden',
+        'sperre_pruefungsbenutzer_ab_datum' => '2026-08-28',
+        'sperre_pruefungsbenutzer_ab_uhrzeit' => '18:00',
+        'loeschung_pruefungsbenutzer_ab_datum' => '',
+        'loeschung_pruefungsbenutzer_ab_uhrzeit' => '',
+    ]);
+
+    expect($filtered['sperre_pruefungsbenutzer_ab'])->toBe('2026-08-28 18:00')
+        ->and($filtered)->not->toHaveKey('sperre_pruefungsbenutzer_ab_datum')
+        ->and($filtered)->not->toHaveKey('sperre_pruefungsbenutzer_ab_uhrzeit')
+        ->and($filtered)->not->toHaveKey('loeschung_pruefungsbenutzer_ab')
+        ->and($filtered['verwendete_anwendungen'])->toBe('Moodle');
+});
+
+test('it gestuetzte pruefung requires date and time together', function (): void {
+    $rules = app(TicketFormValidation::class)->rulesFor(TicketFormType::ItGestuetztePruefung);
+
+    $validator = validator([
+        'betreff' => 'IT-gestützte Prüfung: Test',
+        'pruefungstermin_id' => 1,
+        'datum' => '2026-08-27',
+        'gewerk' => 'Maler',
+        'raeume' => '1303',
+        'anzahl_teilnehmer' => 10,
+        'ansprechpartner' => 'Max Mustermann',
+        'verwendete_anwendungen' => 'Office',
+        'sperre_pruefungsbenutzer_ab_datum' => '2026-08-28',
+        'sperre_pruefungsbenutzer_ab_uhrzeit' => null,
+    ], $rules);
+
+    expect($validator->fails())->toBeTrue()
+        ->and($validator->errors()->has('sperre_pruefungsbenutzer_ab_uhrzeit'))->toBeTrue();
+});
+
+test('it gestuetzte pruefung body uses german labels', function (): void {
+    $validation = app(TicketFormValidation::class);
+    $builder = app(TicketBodyBuilder::class);
+
+    $formData = $validation->filterFormData(TicketFormType::ItGestuetztePruefung, [
+        'betreff' => 'IT-gestützte Prüfung: Test',
+        'pruefungstermin_id' => 1247861,
+        'datum' => '2026-08-27',
+        'gewerk' => 'Maler',
+        'raeume' => '1303',
+        'anzahl_teilnehmer' => 10,
+        'ansprechpartner' => 'Susanne Potthoff',
+        'verwendete_anwendungen' => 'Moodle',
+        'sperre_pruefungsbenutzer_ab_datum' => '2026-08-28',
+        'sperre_pruefungsbenutzer_ab_uhrzeit' => '18:00',
+    ]);
+
+    $body = $builder->build('', $formData);
+
+    expect($body)
+        ->toContain('PrüfungsterminID: 1247861')
+        ->toContain('Gewerk (Ordnung): Maler')
+        ->toContain('Verwendete Anwendungen: Moodle')
+        ->toContain('Sperre Prüfungsbenutzer ab: 2026-08-28 18:00')
+        ->toContain('Ansprechpartner: Susanne Potthoff');
+});

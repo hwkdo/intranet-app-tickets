@@ -21,6 +21,7 @@
         "illuminate/contracts": "^10.0||^11.0||^12.0",
         "illuminate/database": "^10.0||^11.0||^12.0",
         "illuminate/support": "^10.0||^11.0||^12.0",
+        "hwkdo/bue-laravel": "dev-main || ^0",
         "hwkdo/intranet-app-base": "dev-main || ^1.0",
         "hwkdo/intranet-app-teams-bot": "dev-main || ^0",
         "livewire/volt": "^1.6.7",

@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Hwkdo\BueLaravel\BueLaravel;
 use Hwkdo\IntranetAppTickets\Database\Seeders\TicketCategorySeeder;
 use Hwkdo\IntranetAppTickets\Enums\TicketFilterEnum;
+use Hwkdo\IntranetAppTickets\Enums\TicketFormType;
 use Hwkdo\IntranetAppTickets\Enums\TicketRequestStatus;
 use Hwkdo\IntranetAppTickets\Enums\TransmissionChannel;
 use Hwkdo\IntranetAppTickets\Mail\TicketCreatedMail;
@@ -17,6 +19,7 @@ use Hwkdo\IntranetAppTickets\Services\ZammadTicketService;
 use Hwkdo\IntranetAppTickets\Services\ZammadUserResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Livewire\Volt\Volt;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -248,4 +251,96 @@ test('ticket request show page renders for requester', function () {
         ->assertSuccessful()
         ->assertSee('IT Anfrage Test')
         ->assertSee('#A-'.$request->id);
+});
+
+test('it gestuetzte pruefung category is seeded without approval', function () {
+    $category = TicketCategory::query()->where('slug', 'it-gestuetzte-pruefung')->firstOrFail();
+
+    expect($category->form)->toBe(TicketFormType::ItGestuetztePruefung)
+        ->and($category->label)->toBe('IT-gestützte Prüfung')
+        ->and($category->transmission)->toBe(TransmissionChannel::Zammad)
+        ->and($category->requires_approval)->toBeFalse()
+        ->and($category->active)->toBeTrue();
+});
+
+test('it gestuetzte pruefung ticket is dispatched via zammad without approval', function () {
+    $user = ticketsTestUser();
+
+    $category = TicketCategory::query()->where('slug', 'it-gestuetzte-pruefung')->firstOrFail();
+    $category->update(['zammad_group_id' => 42]);
+
+    $this->mock(ZammadUserResolver::class, function ($mock): void {
+        $mock->shouldReceive('resolveCustomerId')->andReturn(99);
+    });
+
+    $this->mock(ZammadTicketService::class, function ($mock): void {
+        $mock->shouldReceive('createTicket')->once()->andReturn(888);
+    });
+
+    $request = app(TicketSubmissionService::class)->submit(
+        category: $category,
+        formData: [
+            'betreff' => 'IT-gestützte Prüfung: FKB Sommer',
+            'pruefungstermin_id' => 1247861,
+            'datum' => '2026-08-27',
+            'gewerk' => 'Kaufmännische Betriebsführung',
+            'raeume' => '1303, Bildungszentrum HWK Haus I',
+            'anzahl_teilnehmer' => 10,
+            'ansprechpartner' => 'Susanne Potthoff, 0231 5493-511',
+            'verwendete_anwendungen' => 'Moodle, Word',
+            'weitere_wichtige_informationen' => 'Namensschilder vorhanden',
+            'sperre_pruefungsbenutzer_ab' => '2026-08-28 18:00',
+        ],
+        files: [],
+        requester: $user,
+    );
+
+    expect($request->fresh()->status)->toBe(TicketRequestStatus::Dispatched)
+        ->and($request->zammad_ticket_id)->toBe(888)
+        ->and($request->form_data['pruefungstermin_id'])->toBe(1247861)
+        ->and($request->body)->toContain('Verwendete Anwendungen: Moodle, Word')
+        ->and($request->body)->toContain('Sperre Prüfungsbenutzer ab: 2026-08-28 18:00');
+});
+
+test('it gestuetzte pruefung create form loads termin list from bue', function () {
+    $user = ticketsTestUser();
+    $category = TicketCategory::query()->where('slug', 'it-gestuetzte-pruefung')->firstOrFail();
+
+    $this->mock(BueLaravel::class, function ($mock): void {
+        $mock->shouldReceive('getTicketPruefungenByDatum')
+            ->once()
+            ->andReturn(collect([(object) [
+                'termin_id' => 1247861,
+                'pruefung_bezeichnung' => 'FKB VZ 7 Sommer 2026',
+                'termin_bezeichnung' => 'schriftliche Prüfung EDV-gestützt',
+                'ordnung' => 'Kaufmännische Betriebsführung',
+                'uhrzeit_von' => '09:00',
+                'uhrzeit_bis' => '10:00',
+                'pruefungsort_name' => '1303',
+                'gebaeudenummer' => 'Bildungszentrum HWK Haus I',
+                'raumnummer' => null,
+                'anzahl_prueflinge' => 10,
+                'bearbeiter_vorname' => 'Susanne',
+                'bearbeiter_nachname' => 'Potthoff',
+                'bearbeiter_telefon' => '0231 5493-511',
+                'bearbeiter_email' => 'susanne.potthoff@hwk-do.de',
+                'datum' => '2026-08-27 00:00:00',
+            ]]));
+    });
+
+    $this->actingAs($user);
+
+    Volt::test('apps.tickets.create.form', ['category' => $category])
+        ->assertSet('pruefung_step', 1)
+        ->assertSee('Wann findet die Prüfung statt?')
+        ->set('pruefung_datum', '2026-08-27')
+        ->call('loadPruefungen')
+        ->assertSet('pruefung_step', 2)
+        ->assertSee('FKB VZ 7 Sommer 2026')
+        ->call('selectPruefungTermin', 1247861)
+        ->assertSet('pruefung_step', 3)
+        ->assertSet('pruefungstermin_id', 1247861)
+        ->assertSet('gewerk', 'Kaufmännische Betriebsführung')
+        ->assertSet('raeume', '1303, Bildungszentrum HWK Haus I')
+        ->assertSee('Verwendete Anwendungen');
 });

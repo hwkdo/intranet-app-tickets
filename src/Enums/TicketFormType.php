@@ -14,6 +14,7 @@ enum TicketFormType: string
     case Vertragsmanagement = 'vertragsmanagement';
     case Zollauktion = 'zollauktion';
     case Moodle = 'moodle';
+    case ItGestuetztePruefung = 'it_gestuetzte_pruefung';
 
     public function label(): string
     {
@@ -26,6 +27,7 @@ enum TicketFormType: string
             self::Vertragsmanagement => 'Vertragsmanagement',
             self::Zollauktion => 'Zollauktion / Anlagenverkauf',
             self::Moodle => 'Moodle',
+            self::ItGestuetztePruefung => 'IT-gestützte Prüfung',
         };
     }
 }

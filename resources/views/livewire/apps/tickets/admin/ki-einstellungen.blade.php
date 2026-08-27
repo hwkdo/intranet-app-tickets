@@ -11,124 +11,80 @@ use Hwkdo\IntranetAppTickets\Data\AppSettings;
 use Hwkdo\IntranetAppTickets\Enums\TeamsTicketAiProvider;
 use Hwkdo\IntranetAppTickets\Services\TicketsAppSettingsStore;
 use Illuminate\Validation\Rule;
-use Livewire\Attributes\Computed;
-use Livewire\Component;
+use function Livewire\Volt\{computed, mount, state};
 
-new class extends Component
-{
-    public string $aiTextProviderOverride = '';
+state([
+    'aiTextProviderOverride' => '',
+    'aiTextModelOverride' => '',
+    'aiImageProviderOverride' => '',
+    'aiImageModelOverride' => '',
+    'teamsTicketAiEnabled' => true,
+    'teamsTicketAiProvider' => 'langdock',
+    'teamsTicketAiModelOpenWebUi' => '',
+    'teamsTicketAiModelLangdock' => '',
+    'openWebUiModel' => 'intranet-app-tickets',
+]);
 
-    public string $aiTextModelOverride = '';
+mount(function (): void {
+    $settings = app(TicketsAppSettingsStore::class)->current();
 
-    public string $aiImageProviderOverride = '';
+    $this->aiTextProviderOverride = $settings->aiTextProviderOverride?->value ?? '';
+    $this->aiTextModelOverride = $settings->textModelOverride() ?? '';
+    $this->aiImageProviderOverride = $settings->aiImageProviderOverride?->value ?? '';
+    $this->aiImageModelOverride = $settings->imageModelOverride() ?? '';
+    $this->teamsTicketAiEnabled = $settings->teamsTicketAiEnabled;
+    $this->teamsTicketAiProvider = $settings->teamsTicketAiProvider->value;
+    $this->teamsTicketAiModelOpenWebUi = $settings->teamsTicketAiModelOpenWebUi;
+    $this->teamsTicketAiModelLangdock = $settings->teamsTicketAiModelLangdock;
+    $this->openWebUiModel = $settings->openWebUiModel;
+});
 
-    public string $aiImageModelOverride = '';
+$baseAiTextSummary = computed(function (): string {
+    $base = app(IntranetBaseAiConfigSourceInterface::class);
+    $model = $base->textModel() ?? 'Provider-Standard';
 
-    public bool $teamsTicketAiEnabled = true;
+    return $base->textProvider()->label().' / '.$model;
+});
 
-    public string $teamsTicketAiProvider = 'langdock';
+$baseAiImageSummary = computed(function (): string {
+    $base = app(IntranetBaseAiConfigSourceInterface::class);
+    $model = $base->imageModel() ?? 'Provider-Standard';
 
-    public string $teamsTicketAiModelOpenWebUi = '';
+    return $base->imageProvider()->label().' / '.$model;
+});
 
-    public string $teamsTicketAiModelLangdock = '';
+$effectiveAiTextSummary = computed(function (): string {
+    $resolved = app(AiConfigResolverInterface::class)->resolve('tickets', AiCapability::Text);
 
-    public string $openWebUiModel = 'intranet-app-tickets';
+    return $resolved->provider->label().' / '.($resolved->model ?? 'Provider-Standard');
+});
 
-    public function mount(): void
-    {
-        $settings = app(TicketsAppSettingsStore::class)->current();
+$effectiveAiImageSummary = computed(function (): string {
+    $resolved = app(AiConfigResolverInterface::class)->resolve('tickets', AiCapability::Image);
 
-        $this->aiTextProviderOverride = $settings->aiTextProviderOverride?->value ?? '';
-        $this->aiTextModelOverride = $settings->textModelOverride() ?? '';
-        $this->aiImageProviderOverride = $settings->aiImageProviderOverride?->value ?? '';
-        $this->aiImageModelOverride = $settings->imageModelOverride() ?? '';
-        $this->teamsTicketAiEnabled = $settings->teamsTicketAiEnabled;
-        $this->teamsTicketAiProvider = $settings->teamsTicketAiProvider->value;
-        $this->teamsTicketAiModelOpenWebUi = $settings->teamsTicketAiModelOpenWebUi;
-        $this->teamsTicketAiModelLangdock = $settings->teamsTicketAiModelLangdock;
-        $this->openWebUiModel = $settings->openWebUiModel;
-    }
+    return $resolved->provider->label().' / '.($resolved->model ?? 'Provider-Standard');
+});
 
-    public function save(): void
-    {
-        $this->validate([
-            'aiTextProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
-            'aiTextModelOverride' => 'nullable|string|max:100',
-            'aiImageProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
-            'aiImageModelOverride' => 'nullable|string|max:100',
-            'teamsTicketAiEnabled' => 'boolean',
-            'teamsTicketAiProvider' => ['required', 'string', Rule::enum(TeamsTicketAiProvider::class)],
-            'teamsTicketAiModelOpenWebUi' => 'nullable|string|max:255',
-            'teamsTicketAiModelLangdock' => 'nullable|string|max:255',
-            'openWebUiModel' => 'required|string|max:255',
-        ]);
+$save = function (): void {
+    $this->validate([
+        'aiTextProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
+        'aiTextModelOverride' => 'nullable|string|max:100',
+        'aiImageProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
+        'aiImageModelOverride' => 'nullable|string|max:100',
+        'teamsTicketAiEnabled' => 'boolean',
+        'teamsTicketAiProvider' => ['required', 'string', Rule::enum(TeamsTicketAiProvider::class)],
+        'teamsTicketAiModelOpenWebUi' => 'nullable|string|max:255',
+        'teamsTicketAiModelLangdock' => 'nullable|string|max:255',
+        'openWebUiModel' => 'required|string|max:255',
+    ]);
 
-        $current = app(TicketsAppSettingsStore::class)->current();
-
-        $settings = AppSettings::from(array_merge($current->toArray(), [
-            'aiTextProviderOverride' => $this->parseProviderOverride($this->aiTextProviderOverride),
-            'aiTextModelOverride' => $this->blankToNull($this->aiTextModelOverride),
-            'aiImageProviderOverride' => $this->parseProviderOverride($this->aiImageProviderOverride),
-            'aiImageModelOverride' => $this->blankToNull($this->aiImageModelOverride),
-            'teamsTicketAiEnabled' => $this->teamsTicketAiEnabled,
-            'teamsTicketAiProvider' => TeamsTicketAiProvider::from($this->teamsTicketAiProvider),
-            'teamsTicketAiModelOpenWebUi' => trim($this->teamsTicketAiModelOpenWebUi),
-            'teamsTicketAiModelLangdock' => trim($this->teamsTicketAiModelLangdock),
-            'openWebUiModel' => trim($this->openWebUiModel),
-        ]));
-
-        app(TicketsAppSettingsStore::class)->save($settings);
-
-        Flux::toast(
-            heading: 'Gespeichert',
-            text: 'KI-Einstellungen wurden gespeichert.',
-            variant: 'success',
-        );
-    }
-
-    #[Computed]
-    public function baseAiTextSummary(): string
-    {
-        $base = app(IntranetBaseAiConfigSourceInterface::class);
-        $model = $base->textModel() ?? 'Provider-Standard';
-
-        return $base->textProvider()->label().' / '.$model;
-    }
-
-    #[Computed]
-    public function baseAiImageSummary(): string
-    {
-        $base = app(IntranetBaseAiConfigSourceInterface::class);
-        $model = $base->imageModel() ?? 'Provider-Standard';
-
-        return $base->imageProvider()->label().' / '.$model;
-    }
-
-    #[Computed]
-    public function effectiveAiTextSummary(): string
-    {
-        $resolved = app(AiConfigResolverInterface::class)->resolve('tickets', AiCapability::Text);
-
-        return $resolved->provider->label().' / '.($resolved->model ?? 'Provider-Standard');
-    }
-
-    #[Computed]
-    public function effectiveAiImageSummary(): string
-    {
-        $resolved = app(AiConfigResolverInterface::class)->resolve('tickets', AiCapability::Image);
-
-        return $resolved->provider->label().' / '.($resolved->model ?? 'Provider-Standard');
-    }
-
-    private function parseProviderOverride(string $value): ?AiProvider
-    {
+    $parseProviderOverride = function (string $value): ?AiProvider {
         $trimmed = trim($value);
 
         return $trimmed === '' ? null : AiProvider::from($trimmed);
-    }
+    };
 
-    private function blankToNull(?string $value): ?string
-    {
+    $blankToNull = function (?string $value): ?string {
         if ($value === null) {
             return null;
         }
@@ -136,8 +92,33 @@ new class extends Component
         $trimmed = trim($value);
 
         return $trimmed === '' ? null : $trimmed;
-    }
+    };
+
+    $current = app(TicketsAppSettingsStore::class)->current();
+
+    $settings = AppSettings::from(array_merge($current->toArray(), [
+        'aiTextProviderOverride' => $parseProviderOverride($this->aiTextProviderOverride),
+        'aiTextModelOverride' => $blankToNull($this->aiTextModelOverride),
+        'aiImageProviderOverride' => $parseProviderOverride($this->aiImageProviderOverride),
+        'aiImageModelOverride' => $blankToNull($this->aiImageModelOverride),
+        'teamsTicketAiEnabled' => $this->teamsTicketAiEnabled,
+        'teamsTicketAiProvider' => TeamsTicketAiProvider::from($this->teamsTicketAiProvider),
+        'teamsTicketAiModelOpenWebUi' => trim($this->teamsTicketAiModelOpenWebUi),
+        'teamsTicketAiModelLangdock' => trim($this->teamsTicketAiModelLangdock),
+        'openWebUiModel' => trim($this->openWebUiModel),
+    ]));
+
+    app(TicketsAppSettingsStore::class)->save($settings);
+
+    unset($this->baseAiTextSummary, $this->baseAiImageSummary, $this->effectiveAiTextSummary, $this->effectiveAiImageSummary);
+
+    Flux::toast(
+        heading: 'Gespeichert',
+        text: 'KI-Einstellungen wurden gespeichert.',
+        variant: 'success',
+    );
 };
+
 ?>
 
 <flux:card class="glass-card">

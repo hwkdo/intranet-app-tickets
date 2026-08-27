@@ -10,6 +10,22 @@ use Illuminate\Database\Eloquent\Model;
 class TicketBodyBuilder
 {
     /**
+     * @var array<string, string>
+     */
+    private const FIELD_LABELS = [
+        'pruefungstermin_id' => 'PrüfungsterminID',
+        'datum' => 'Datum',
+        'gewerk' => 'Gewerk (Ordnung)',
+        'raeume' => 'Räume',
+        'anzahl_teilnehmer' => 'Anzahl Teilnehmer',
+        'ansprechpartner' => 'Ansprechpartner',
+        'verwendete_anwendungen' => 'Verwendete Anwendungen',
+        'weitere_wichtige_informationen' => 'Weitere Wichtige Informationen',
+        'sperre_pruefungsbenutzer_ab' => 'Sperre Prüfungsbenutzer ab',
+        'loeschung_pruefungsbenutzer_ab' => 'Löschung Prüfungsbenutzer ab',
+    ];
+
+    /**
      * @param  array<string, mixed>  $formData
      * @param  list<string>  $excludeKeys
      */
@@ -33,12 +49,15 @@ class TicketBodyBuilder
             'on_behalf_of_user_id',
             'abgestimmt_mit',
             'geschaeftsbereich',
-            'ansprechpartner',
             'standort',
             'attachments',
             '_token',
             '_method',
         ];
+
+        if ($ansprechpartnerName !== null) {
+            $defaultExclude[] = 'ansprechpartner';
+        }
 
         $exclude = array_merge($defaultExclude, $excludeKeys);
 
@@ -51,7 +70,7 @@ class TicketBodyBuilder
                 $value = $value ? 'Ja' : 'Nein';
             }
 
-            $label = ucfirst(str_replace('_', ' ', (string) $key));
+            $label = self::FIELD_LABELS[$key] ?? ucfirst(str_replace('_', ' ', (string) $key));
             $body = $this->appendLine($body, $label.': '.(string) $value);
         }
 
