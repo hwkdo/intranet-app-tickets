@@ -14,6 +14,7 @@ class TicketBodyBuilder
      */
     private const FIELD_LABELS = [
         'pruefungstermin_id' => 'PrüfungsterminID',
+        'pruefung_id' => 'PrüfungID',
         'datum' => 'Datum',
         'gewerk' => 'Gewerk (Ordnung)',
         'raeume' => 'Räume',
@@ -68,6 +69,11 @@ class TicketBodyBuilder
             $count = count($termine);
 
             $body = $this->appendLine($body, 'Die Prüfung findet in '.$count.' Räumen statt.');
+
+            if (isset($formData['pruefung_id']) && $formData['pruefung_id'] !== null && $formData['pruefung_id'] !== '') {
+                $body = $this->appendLine($body, 'PrüfungID: '.(string) $formData['pruefung_id']);
+                $exclude[] = 'pruefung_id';
+            }
 
             foreach ($termine as $termin) {
                 $body = $this->appendLine($body, 'PrüfungsterminID: '.(string) $termin['pruefungstermin_id']);

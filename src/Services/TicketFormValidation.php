@@ -100,6 +100,7 @@ class TicketFormValidation
             TicketFormType::ItGestuetztePruefung => $this->isMultiPruefung($data)
                 ? [
                     'betreff',
+                    'pruefung_id',
                     'pruefungstermine',
                     'datum',
                     'gewerk',
@@ -112,6 +113,7 @@ class TicketFormValidation
                 : [
                     'betreff',
                     'pruefungstermin_id',
+                    'pruefung_id',
                     'datum',
                     'gewerk',
                     'raeume',
@@ -188,6 +190,7 @@ class TicketFormValidation
             TicketFormType::ItGestuetztePruefung => $multiPruefung
                 ? [
                     'betreff' => ['required', 'string', 'max:200'],
+                    'pruefung_id' => ['required', 'integer'],
                     'pruefungstermine' => ['required', 'array', 'min:2'],
                     'pruefungstermine.*.pruefungstermin_id' => ['required', 'integer'],
                     'pruefungstermine.*.raeume' => ['required', 'string', 'max:500'],
@@ -205,6 +208,7 @@ class TicketFormValidation
                 : [
                     'betreff' => ['required', 'string', 'max:200'],
                     'pruefungstermin_id' => ['required', 'integer'],
+                    'pruefung_id' => ['required', 'integer'],
                     'datum' => ['required', 'date'],
                     'gewerk' => ['required', 'string', 'max:500'],
                     'raeume' => ['required', 'string', 'max:500'],

@@ -79,6 +79,7 @@ test('it gestuetzte pruefung combines optional date and time fields', function (
     $filtered = $validation->filterFormData(TicketFormType::ItGestuetztePruefung, [
         'betreff' => 'IT-gestützte Prüfung: Test',
         'pruefungstermin_id' => 1247861,
+        'pruefung_id' => 9001,
         'datum' => '2026-08-27',
         'gewerk' => 'Maler',
         'raeume' => '1303, Bildungszentrum HWK Haus I',
@@ -96,7 +97,8 @@ test('it gestuetzte pruefung combines optional date and time fields', function (
         ->and($filtered)->not->toHaveKey('sperre_pruefungsbenutzer_ab_datum')
         ->and($filtered)->not->toHaveKey('sperre_pruefungsbenutzer_ab_uhrzeit')
         ->and($filtered)->not->toHaveKey('loeschung_pruefungsbenutzer_ab')
-        ->and($filtered['verwendete_anwendungen'])->toBe('Moodle');
+        ->and($filtered['verwendete_anwendungen'])->toBe('Moodle')
+        ->and($filtered['pruefung_id'])->toBe(9001);
 });
 
 test('it gestuetzte pruefung requires date and time together', function (): void {
@@ -105,6 +107,7 @@ test('it gestuetzte pruefung requires date and time together', function (): void
     $validator = validator([
         'betreff' => 'IT-gestützte Prüfung: Test',
         'pruefungstermin_id' => 1,
+        'pruefung_id' => 50,
         'datum' => '2026-08-27',
         'gewerk' => 'Maler',
         'raeume' => '1303',
@@ -126,6 +129,7 @@ test('it gestuetzte pruefung body uses german labels', function (): void {
     $formData = $validation->filterFormData(TicketFormType::ItGestuetztePruefung, [
         'betreff' => 'IT-gestützte Prüfung: Test',
         'pruefungstermin_id' => 1247861,
+        'pruefung_id' => 9001,
         'datum' => '2026-08-27',
         'gewerk' => 'Maler',
         'raeume' => '1303',
@@ -140,6 +144,7 @@ test('it gestuetzte pruefung body uses german labels', function (): void {
 
     expect($body)
         ->toContain('PrüfungsterminID: 1247861')
+        ->toContain('PrüfungID: 9001')
         ->toContain('Gewerk (Ordnung): Maler')
         ->toContain('Verwendete Anwendungen: Moodle')
         ->toContain('Sperre Prüfungsbenutzer ab: 2026-08-28 18:00')
@@ -153,6 +158,7 @@ test('it gestuetzte pruefung multi body lists rooms then shared fields', functio
 
     $formData = $validation->filterFormData(TicketFormType::ItGestuetztePruefung, [
         'betreff' => 'IT-gestützte Prüfung: Test (2 Räume)',
+        'pruefung_id' => 50,
         'pruefungstermine' => [
             [
                 'pruefungstermin_id' => 1001,
@@ -175,7 +181,9 @@ test('it gestuetzte pruefung multi body lists rooms then shared fields', functio
 
     expect($formData)->toHaveKey('pruefungstermine')
         ->and($formData)->not->toHaveKey('pruefungstermin_id')
+        ->and($formData['pruefung_id'])->toBe(50)
         ->and($body)->toStartWith('Die Prüfung findet in 2 Räumen statt.')
+        ->and($body)->toContain('PrüfungID: 50')
         ->and($body)->toContain("PrüfungsterminID: 1001\n\nRaum: 1301\n\nAnzahl Teilnehmer: 8")
         ->and($body)->toContain("PrüfungsterminID: 1002\n\nRaum: 1302\n\nAnzahl Teilnehmer: 12")
         ->and($body)->toContain('Datum: 2026-08-27')

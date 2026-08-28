@@ -112,6 +112,7 @@
         @if (count($pruefungstermine) > 1)
             <div class="space-y-4">
                 <flux:heading size="sm">Räume / Termine</flux:heading>
+                <flux:input wire:model="pruefung_id" label="PrüfungID" required />
                 @foreach ($pruefungstermine as $index => $eintrag)
                     <div class="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
                         <flux:heading size="sm">Raum {{ $index + 1 }}</flux:heading>
@@ -141,6 +142,7 @@
             <flux:input wire:model="ansprechpartner" label="Ansprechpartner" required />
         @else
             <flux:input wire:model="pruefungstermin_id" label="PrüfungsterminID" required />
+            <flux:input wire:model="pruefung_id" label="PrüfungID" required />
             <flux:date-picker wire:model="datum" label="Datum" class="w-full" required />
             <flux:textarea wire:model="gewerk" label="Gewerk (Ordnung)" rows="2" required />
             <flux:input wire:model="raeume" label="Räume" required />

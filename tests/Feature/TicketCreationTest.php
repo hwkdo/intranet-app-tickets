@@ -282,6 +282,7 @@ test('it gestuetzte pruefung ticket is dispatched via zammad without approval', 
         formData: [
             'betreff' => 'IT-gestützte Prüfung: FKB Sommer',
             'pruefungstermin_id' => 1247861,
+            'pruefung_id' => 9001,
             'datum' => '2026-08-27',
             'gewerk' => 'Kaufmännische Betriebsführung',
             'raeume' => '1303, Bildungszentrum HWK Haus I',
@@ -298,6 +299,8 @@ test('it gestuetzte pruefung ticket is dispatched via zammad without approval', 
     expect($request->fresh()->status)->toBe(TicketRequestStatus::Dispatched)
         ->and($request->zammad_ticket_id)->toBe(888)
         ->and($request->form_data['pruefungstermin_id'])->toBe(1247861)
+        ->and($request->form_data['pruefung_id'])->toBe(9001)
+        ->and($request->body)->toContain('PrüfungID: 9001')
         ->and($request->body)->toContain('Verwendete Anwendungen: Moodle, Word')
         ->and($request->body)->toContain('Sperre Prüfungsbenutzer ab: 2026-08-28 18:00');
 });
@@ -343,6 +346,7 @@ test('it gestuetzte pruefung create form loads termin list from bue', function (
         ->call('confirmPruefungTermine')
         ->assertSet('pruefung_step', 3)
         ->assertSet('pruefungstermin_id', 1247861)
+        ->assertSet('pruefung_id', 9001)
         ->assertSet('gewerk', 'Kaufmännische Betriebsführung')
         ->assertSet('raeume', '1303, Bildungszentrum HWK Haus I')
         ->assertSee('Verwendete Anwendungen');
@@ -428,6 +432,7 @@ test('it gestuetzte pruefung allows multi select only for same pruefung id', fun
         ->call('confirmPruefungTermine')
         ->assertSet('pruefung_step', 3)
         ->assertSet('betreff', 'IT-gestützte Prüfung: Prüfung A (2 Räume)')
+        ->assertSet('pruefung_id', 50)
         ->assertSet('pruefungstermine', [
             [
                 'pruefungstermin_id' => 1001,
@@ -461,6 +466,7 @@ test('it gestuetzte pruefung multi ticket body lists rooms separately', function
         category: $category,
         formData: [
             'betreff' => 'IT-gestützte Prüfung: Prüfung A (2 Räume)',
+            'pruefung_id' => 50,
             'pruefungstermine' => [
                 [
                     'pruefungstermin_id' => 1001,
@@ -485,6 +491,7 @@ test('it gestuetzte pruefung multi ticket body lists rooms separately', function
     expect($request->fresh()->status)->toBe(TicketRequestStatus::Dispatched)
         ->and($request->subject)->toBe('IT-gestützte Prüfung: Prüfung A (2 Räume)')
         ->and($request->body)->toContain('Die Prüfung findet in 2 Räumen statt.')
+        ->and($request->body)->toContain('PrüfungID: 50')
         ->and($request->body)->toContain('PrüfungsterminID: 1001')
         ->and($request->body)->toContain('Raum: 1301, Haus I')
         ->and($request->body)->toContain('Anzahl Teilnehmer: 8')
@@ -495,5 +502,6 @@ test('it gestuetzte pruefung multi ticket body lists rooms separately', function
         ->and($request->body)->toContain('Verwendete Anwendungen: Moodle')
         ->and($request->body)->not->toContain('Räume:')
         ->and($request->form_data)->toHaveKey('pruefungstermine')
+        ->and($request->form_data['pruefung_id'])->toBe(50)
         ->and($request->form_data)->not->toHaveKey('pruefungstermin_id');
 });

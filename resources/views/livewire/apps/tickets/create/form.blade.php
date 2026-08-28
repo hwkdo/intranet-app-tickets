@@ -65,6 +65,7 @@ state([
     'pruefung_selected_ids' => [],
     'pruefung_selected_pruefung_id' => null,
     'pruefungstermin_id' => null,
+    'pruefung_id' => null,
     'pruefungstermine' => [],
     'gewerk' => '',
     'raeume' => '',
@@ -270,11 +271,13 @@ $confirmPruefungTermine = function (): void {
 
     if ($selectedTermine->count() === 1) {
         $this->pruefungstermin_id = (int) $first['termin_id'];
+        $this->pruefung_id = isset($first['pruefung_id']) ? (int) $first['pruefung_id'] : null;
         $this->raeume = $this->formatPruefungRaum($first);
         $this->anzahl_teilnehmer = (int) ($first['anzahl_prueflinge'] ?? 0);
         $this->pruefungstermine = [];
     } else {
         $this->pruefungstermin_id = null;
+        $this->pruefung_id = isset($first['pruefung_id']) ? (int) $first['pruefung_id'] : null;
         $this->raeume = '';
         $this->anzahl_teilnehmer = null;
         $this->pruefungstermine = $selectedTermine
@@ -301,6 +304,7 @@ $pruefungZurueck = function (): void {
         $this->pruefung_selected_ids = [];
         $this->pruefung_selected_pruefung_id = null;
         $this->pruefungstermin_id = null;
+        $this->pruefung_id = null;
         $this->pruefungstermine = [];
     }
 };
