@@ -19,10 +19,11 @@ class TicketFormValidation
     {
         if ($form === TicketFormType::ItGestuetztePruefung) {
             $data = $this->combineOptionalDateTimes($data);
+            $data = $this->normalizePruefungstermine($data);
         }
 
         return collect($data)
-            ->only($this->persistedFieldKeys($form))
+            ->only($this->persistedFieldKeys($form, $data))
             ->reject(fn (mixed $value): bool => $value === null || $value === '')
             ->all();
     }
@@ -30,7 +31,7 @@ class TicketFormValidation
     /**
      * @return list<string>
      */
-    public function persistedFieldKeys(TicketFormType $form): array
+    public function persistedFieldKeys(TicketFormType $form, array $data = []): array
     {
         return match ($form) {
             TicketFormType::ItSupport,
@@ -96,26 +97,38 @@ class TicketFormValidation
                 'standort',
                 'ansprechpartner',
             ],
-            TicketFormType::ItGestuetztePruefung => [
-                'betreff',
-                'pruefungstermin_id',
-                'datum',
-                'gewerk',
-                'raeume',
-                'anzahl_teilnehmer',
-                'ansprechpartner',
-                'verwendete_anwendungen',
-                'weitere_wichtige_informationen',
-                'sperre_pruefungsbenutzer_ab',
-                'loeschung_pruefungsbenutzer_ab',
-            ],
+            TicketFormType::ItGestuetztePruefung => $this->isMultiPruefung($data)
+                ? [
+                    'betreff',
+                    'pruefungstermine',
+                    'datum',
+                    'gewerk',
+                    'ansprechpartner',
+                    'verwendete_anwendungen',
+                    'weitere_wichtige_informationen',
+                    'sperre_pruefungsbenutzer_ab',
+                    'loeschung_pruefungsbenutzer_ab',
+                ]
+                : [
+                    'betreff',
+                    'pruefungstermin_id',
+                    'datum',
+                    'gewerk',
+                    'raeume',
+                    'anzahl_teilnehmer',
+                    'ansprechpartner',
+                    'verwendete_anwendungen',
+                    'weitere_wichtige_informationen',
+                    'sperre_pruefungsbenutzer_ab',
+                    'loeschung_pruefungsbenutzer_ab',
+                ],
         };
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function rulesFor(TicketFormType $form, bool $meisterbrief = false): array
+    public function rulesFor(TicketFormType $form, bool $meisterbrief = false, bool $multiPruefung = false): array
     {
         return match ($form) {
             TicketFormType::ItSupport,
@@ -172,22 +185,79 @@ class TicketFormValidation
                 'standort' => ['required', 'integer', 'exists:standorts,id'],
                 'ansprechpartner' => ['required', 'integer', 'exists:users,id'],
             ], $this->attachmentRules()),
-            TicketFormType::ItGestuetztePruefung => [
-                'betreff' => ['required', 'string', 'max:200'],
-                'pruefungstermin_id' => ['required', 'integer'],
-                'datum' => ['required', 'date'],
-                'gewerk' => ['required', 'string', 'max:500'],
-                'raeume' => ['required', 'string', 'max:500'],
-                'anzahl_teilnehmer' => ['required', 'integer', 'min:0'],
-                'ansprechpartner' => ['required', 'string', 'max:500'],
-                'verwendete_anwendungen' => ['required', 'string', 'max:3000'],
-                'weitere_wichtige_informationen' => ['nullable', 'string', 'max:3000'],
-                'sperre_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:sperre_pruefungsbenutzer_ab_uhrzeit'],
-                'sperre_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:sperre_pruefungsbenutzer_ab_datum'],
-                'loeschung_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:loeschung_pruefungsbenutzer_ab_uhrzeit'],
-                'loeschung_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:loeschung_pruefungsbenutzer_ab_datum'],
-            ],
+            TicketFormType::ItGestuetztePruefung => $multiPruefung
+                ? [
+                    'betreff' => ['required', 'string', 'max:200'],
+                    'pruefungstermine' => ['required', 'array', 'min:2'],
+                    'pruefungstermine.*.pruefungstermin_id' => ['required', 'integer'],
+                    'pruefungstermine.*.raeume' => ['required', 'string', 'max:500'],
+                    'pruefungstermine.*.anzahl_teilnehmer' => ['required', 'integer', 'min:0'],
+                    'datum' => ['required', 'date'],
+                    'gewerk' => ['required', 'string', 'max:500'],
+                    'ansprechpartner' => ['required', 'string', 'max:500'],
+                    'verwendete_anwendungen' => ['required', 'string', 'max:3000'],
+                    'weitere_wichtige_informationen' => ['nullable', 'string', 'max:3000'],
+                    'sperre_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:sperre_pruefungsbenutzer_ab_uhrzeit'],
+                    'sperre_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:sperre_pruefungsbenutzer_ab_datum'],
+                    'loeschung_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:loeschung_pruefungsbenutzer_ab_uhrzeit'],
+                    'loeschung_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:loeschung_pruefungsbenutzer_ab_datum'],
+                ]
+                : [
+                    'betreff' => ['required', 'string', 'max:200'],
+                    'pruefungstermin_id' => ['required', 'integer'],
+                    'datum' => ['required', 'date'],
+                    'gewerk' => ['required', 'string', 'max:500'],
+                    'raeume' => ['required', 'string', 'max:500'],
+                    'anzahl_teilnehmer' => ['required', 'integer', 'min:0'],
+                    'ansprechpartner' => ['required', 'string', 'max:500'],
+                    'verwendete_anwendungen' => ['required', 'string', 'max:3000'],
+                    'weitere_wichtige_informationen' => ['nullable', 'string', 'max:3000'],
+                    'sperre_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:sperre_pruefungsbenutzer_ab_uhrzeit'],
+                    'sperre_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:sperre_pruefungsbenutzer_ab_datum'],
+                    'loeschung_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:loeschung_pruefungsbenutzer_ab_uhrzeit'],
+                    'loeschung_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:loeschung_pruefungsbenutzer_ab_datum'],
+                ],
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function normalizePruefungstermine(array $data): array
+    {
+        if (! isset($data['pruefungstermine']) || ! is_array($data['pruefungstermine'])) {
+            return $data;
+        }
+
+        $termine = collect($data['pruefungstermine'])
+            ->filter(fn (mixed $termin): bool => is_array($termin))
+            ->map(fn (array $termin): array => [
+                'pruefungstermin_id' => isset($termin['pruefungstermin_id']) ? (int) $termin['pruefungstermin_id'] : null,
+                'raeume' => isset($termin['raeume']) ? (string) $termin['raeume'] : '',
+                'anzahl_teilnehmer' => isset($termin['anzahl_teilnehmer']) ? (int) $termin['anzahl_teilnehmer'] : null,
+            ])
+            ->values()
+            ->all();
+
+        if (count($termine) > 1) {
+            $data['pruefungstermine'] = $termine;
+            unset($data['pruefungstermin_id'], $data['raeume'], $data['anzahl_teilnehmer']);
+        } else {
+            unset($data['pruefungstermine']);
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function isMultiPruefung(array $data): bool
+    {
+        return isset($data['pruefungstermine'])
+            && is_array($data['pruefungstermine'])
+            && count($data['pruefungstermine']) > 1;
     }
 
     /**

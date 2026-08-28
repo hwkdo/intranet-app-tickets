@@ -62,7 +62,10 @@ state([
     'pruefung_step' => 1,
     'pruefung_datum' => '',
     'pruefung_termine' => [],
+    'pruefung_selected_ids' => [],
+    'pruefung_selected_pruefung_id' => null,
     'pruefungstermin_id' => null,
+    'pruefungstermine' => [],
     'gewerk' => '',
     'raeume' => '',
     'anzahl_teilnehmer' => null,
@@ -120,6 +123,45 @@ $removeAttachment = function (int $index): void {
     }
 };
 
+$mapPruefungTerminRow = function (object|array $row): array {
+    $data = is_array($row) ? $row : (array) $row;
+
+    return [
+        'termin_id' => (int) ($data['termin_id'] ?? 0),
+        'pruefung_id' => isset($data['pruefung_id']) ? (int) $data['pruefung_id'] : null,
+        'pruefung_bezeichnung' => (string) ($data['pruefung_bezeichnung'] ?? ''),
+        'termin_bezeichnung' => (string) ($data['termin_bezeichnung'] ?? ''),
+        'ordnung' => (string) ($data['ordnung'] ?? ''),
+        'uhrzeit_von' => (string) ($data['uhrzeit_von'] ?? ''),
+        'uhrzeit_bis' => (string) ($data['uhrzeit_bis'] ?? ''),
+        'pruefungsort_name' => (string) ($data['pruefungsort_name'] ?? ''),
+        'gebaeudenummer' => (string) ($data['gebaeudenummer'] ?? ''),
+        'raumnummer' => (string) ($data['raumnummer'] ?? ''),
+        'anzahl_prueflinge' => $data['anzahl_prueflinge'] ?? null,
+        'bearbeiter_vorname' => (string) ($data['bearbeiter_vorname'] ?? ''),
+        'bearbeiter_nachname' => (string) ($data['bearbeiter_nachname'] ?? ''),
+        'bearbeiter_telefon' => (string) ($data['bearbeiter_telefon'] ?? ''),
+        'bearbeiter_email' => (string) ($data['bearbeiter_email'] ?? ''),
+        'datum' => (string) ($data['datum'] ?? ''),
+    ];
+};
+
+$formatPruefungRaum = function (array $termin): string {
+    return implode(', ', array_filter([
+        ($termin['pruefungsort_name'] ?? '') !== '' ? $termin['pruefungsort_name'] : null,
+        ($termin['gebaeudenummer'] ?? '') !== '' ? $termin['gebaeudenummer'] : null,
+        ($termin['raumnummer'] ?? '') !== '' ? $termin['raumnummer'] : null,
+    ]));
+};
+
+$formatPruefungAnsprechpartner = function (array $termin): string {
+    return implode(', ', array_filter([
+        trim(($termin['bearbeiter_vorname'] ?? '').' '.($termin['bearbeiter_nachname'] ?? '')) ?: null,
+        ($termin['bearbeiter_telefon'] ?? '') !== '' ? $termin['bearbeiter_telefon'] : null,
+        ($termin['bearbeiter_email'] ?? '') !== '' ? $termin['bearbeiter_email'] : null,
+    ]));
+};
+
 $loadPruefungen = function (): void {
     $this->validate([
         'pruefung_datum' => ['required', 'date'],
@@ -128,84 +170,122 @@ $loadPruefungen = function (): void {
     ]);
 
     $termine = BueLaravel::getTicketPruefungenByDatum($this->pruefung_datum)
-        ->map(fn (object $row): array => [
-            'termin_id' => (int) $row->termin_id,
-            'pruefung_bezeichnung' => (string) ($row->pruefung_bezeichnung ?? ''),
-            'termin_bezeichnung' => (string) ($row->termin_bezeichnung ?? ''),
-            'ordnung' => (string) ($row->ordnung ?? ''),
-            'uhrzeit_von' => (string) ($row->uhrzeit_von ?? ''),
-            'uhrzeit_bis' => (string) ($row->uhrzeit_bis ?? ''),
-            'pruefungsort_name' => (string) ($row->pruefungsort_name ?? ''),
-            'gebaeudenummer' => (string) ($row->gebaeudenummer ?? ''),
-            'raumnummer' => (string) ($row->raumnummer ?? ''),
-            'anzahl_prueflinge' => $row->anzahl_prueflinge,
-            'bearbeiter_vorname' => (string) ($row->bearbeiter_vorname ?? ''),
-            'bearbeiter_nachname' => (string) ($row->bearbeiter_nachname ?? ''),
-            'bearbeiter_telefon' => (string) ($row->bearbeiter_telefon ?? ''),
-            'bearbeiter_email' => (string) ($row->bearbeiter_email ?? ''),
-            'datum' => (string) ($row->datum ?? ''),
-        ])
+        ->map(fn (object $row): array => $this->mapPruefungTerminRow($row))
         ->values()
         ->all();
 
     $this->pruefung_termine = $termine;
+    $this->pruefung_selected_ids = [];
+    $this->pruefung_selected_pruefung_id = null;
     $this->pruefung_step = 2;
 };
 
-$selectPruefungTermin = function (int $terminId): void {
-    $termin = collect($this->pruefung_termine)->firstWhere('termin_id', $terminId);
+$togglePruefungTermin = function (int $terminId): void {
+    $termin = collect($this->pruefung_termine)
+        ->first(fn (array $row): bool => (int) $row['termin_id'] === $terminId);
 
     if ($termin === null) {
-        $row = BueLaravel::getTicketPruefungByTerminId($terminId);
+        Flux::toast(heading: 'Fehler', text: 'Der gewählte Prüfungstermin wurde nicht gefunden.', variant: 'danger');
 
-        if ($row === null) {
-            Flux::toast(heading: 'Fehler', text: 'Der gewählte Prüfungstermin wurde nicht gefunden.', variant: 'danger');
-
-            return;
-        }
-
-        $termin = [
-            'termin_id' => (int) $row->termin_id,
-            'pruefung_bezeichnung' => (string) ($row->pruefung_bezeichnung ?? ''),
-            'termin_bezeichnung' => (string) ($row->termin_bezeichnung ?? ''),
-            'ordnung' => (string) ($row->ordnung ?? ''),
-            'uhrzeit_von' => (string) ($row->uhrzeit_von ?? ''),
-            'uhrzeit_bis' => (string) ($row->uhrzeit_bis ?? ''),
-            'pruefungsort_name' => (string) ($row->pruefungsort_name ?? ''),
-            'gebaeudenummer' => (string) ($row->gebaeudenummer ?? ''),
-            'raumnummer' => (string) ($row->raumnummer ?? ''),
-            'anzahl_prueflinge' => $row->anzahl_prueflinge,
-            'bearbeiter_vorname' => (string) ($row->bearbeiter_vorname ?? ''),
-            'bearbeiter_nachname' => (string) ($row->bearbeiter_nachname ?? ''),
-            'bearbeiter_telefon' => (string) ($row->bearbeiter_telefon ?? ''),
-            'bearbeiter_email' => (string) ($row->bearbeiter_email ?? ''),
-            'datum' => (string) ($row->datum ?? ''),
-        ];
+        return;
     }
 
-    $raumParts = array_filter([
-        $termin['pruefungsort_name'] ?: null,
-        $termin['gebaeudenummer'] ?: null,
-        $termin['raumnummer'] ?: null,
-    ]);
+    $selectedIds = collect($this->pruefung_selected_ids)->map(fn ($id): int => (int) $id)->all();
+    $isSelected = in_array($terminId, $selectedIds, true);
 
-    $ansprechpartnerParts = array_filter([
-        trim(($termin['bearbeiter_vorname'] ?? '').' '.($termin['bearbeiter_nachname'] ?? '')) ?: null,
-        $termin['bearbeiter_telefon'] ?: null,
-        $termin['bearbeiter_email'] ?: null,
-    ]);
+    if ($isSelected) {
+        $selectedIds = array_values(array_filter($selectedIds, fn (int $id): bool => $id !== $terminId));
+        $this->pruefung_selected_ids = $selectedIds;
+        $this->pruefung_selected_pruefung_id = $selectedIds === []
+            ? null
+            : (int) $this->pruefung_selected_pruefung_id;
 
-    $bezeichnung = $termin['pruefung_bezeichnung'] !== ''
-        ? $termin['pruefung_bezeichnung']
-        : $termin['termin_bezeichnung'];
+        return;
+    }
 
-    $this->pruefungstermin_id = $termin['termin_id'];
-    $this->datum = Carbon::parse($termin['datum'] !== '' ? $termin['datum'] : $this->pruefung_datum)->toDateString();
-    $this->gewerk = $termin['ordnung'];
-    $this->raeume = implode(', ', $raumParts);
-    $this->anzahl_teilnehmer = (int) ($termin['anzahl_prueflinge'] ?? 0);
-    $this->ansprechpartner = implode(', ', $ansprechpartnerParts);
-    $this->betreff = 'IT-gestützte Prüfung: '.($bezeichnung !== '' ? $bezeichnung : 'Termin '.$termin['termin_id']);
+    $pruefungId = isset($termin['pruefung_id']) ? (int) $termin['pruefung_id'] : null;
+
+    if ($this->pruefung_selected_pruefung_id !== null && $pruefungId !== (int) $this->pruefung_selected_pruefung_id) {
+        Flux::toast(
+            heading: 'Hinweis',
+            text: 'Es können nur Termine derselben Prüfung gemeinsam ausgewählt werden.',
+            variant: 'warning',
+        );
+
+        return;
+    }
+
+    $selectedIds[] = $terminId;
+    $this->pruefung_selected_ids = $selectedIds;
+    $this->pruefung_selected_pruefung_id = $pruefungId;
+};
+
+$confirmPruefungTermine = function (): void {
+    $selectedIds = collect($this->pruefung_selected_ids)->map(fn ($id): int => (int) $id)->unique()->values();
+
+    if ($selectedIds->isEmpty()) {
+        Flux::toast(heading: 'Hinweis', text: 'Bitte mindestens einen Prüfungstermin auswählen.', variant: 'warning');
+
+        return;
+    }
+
+    $selectedTermine = collect($this->pruefung_termine)
+        ->filter(fn (array $termin): bool => $selectedIds->contains((int) $termin['termin_id']))
+        ->sortBy(fn (array $termin): int => $selectedIds->search((int) $termin['termin_id']))
+        ->values();
+
+    if ($selectedTermine->count() !== $selectedIds->count()) {
+        Flux::toast(heading: 'Fehler', text: 'Mindestens ein gewählter Prüfungstermin ist ungültig.', variant: 'danger');
+
+        return;
+    }
+
+    $pruefungIds = $selectedTermine->pluck('pruefung_id')->unique()->filter()->values();
+
+    if ($pruefungIds->count() > 1) {
+        Flux::toast(
+            heading: 'Fehler',
+            text: 'Es können nur Termine derselben Prüfung gemeinsam ausgewählt werden.',
+            variant: 'danger',
+        );
+
+        return;
+    }
+
+    $first = $selectedTermine->first();
+    $bezeichnung = ($first['pruefung_bezeichnung'] ?? '') !== ''
+        ? $first['pruefung_bezeichnung']
+        : ($first['termin_bezeichnung'] ?? '');
+
+    $betreff = 'IT-gestützte Prüfung: '.($bezeichnung !== '' ? $bezeichnung : 'Termin '.$first['termin_id']);
+
+    if ($selectedTermine->count() > 1) {
+        $betreff .= ' ('.$selectedTermine->count().' Räume)';
+    }
+
+    $this->datum = Carbon::parse(($first['datum'] ?? '') !== '' ? $first['datum'] : $this->pruefung_datum)->toDateString();
+    $this->gewerk = (string) ($first['ordnung'] ?? '');
+    $this->ansprechpartner = $this->formatPruefungAnsprechpartner($first);
+    $this->betreff = $betreff;
+
+    if ($selectedTermine->count() === 1) {
+        $this->pruefungstermin_id = (int) $first['termin_id'];
+        $this->raeume = $this->formatPruefungRaum($first);
+        $this->anzahl_teilnehmer = (int) ($first['anzahl_prueflinge'] ?? 0);
+        $this->pruefungstermine = [];
+    } else {
+        $this->pruefungstermin_id = null;
+        $this->raeume = '';
+        $this->anzahl_teilnehmer = null;
+        $this->pruefungstermine = $selectedTermine
+            ->map(fn (array $termin): array => [
+                'pruefungstermin_id' => (int) $termin['termin_id'],
+                'raeume' => $this->formatPruefungRaum($termin),
+                'anzahl_teilnehmer' => (int) ($termin['anzahl_prueflinge'] ?? 0),
+            ])
+            ->all();
+    }
+
     $this->pruefung_step = 3;
 };
 
@@ -218,7 +298,10 @@ $pruefungZurueck = function (): void {
 
     if ($this->pruefung_step === 1) {
         $this->pruefung_termine = [];
+        $this->pruefung_selected_ids = [];
+        $this->pruefung_selected_pruefung_id = null;
         $this->pruefungstermin_id = null;
+        $this->pruefungstermine = [];
     }
 };
 
@@ -227,14 +310,43 @@ $submit = function (): void {
         return;
     }
 
-    $rules = app(TicketFormValidation::class)->rulesFor($this->category->form, (bool) $this->meisterbrief);
+    $isMultiPruefung = $this->category->form === TicketFormType::ItGestuetztePruefung
+        && is_array($this->pruefungstermine)
+        && count($this->pruefungstermine) > 1;
+
+    $rules = app(TicketFormValidation::class)->rulesFor(
+        $this->category->form,
+        (bool) $this->meisterbrief,
+        $isMultiPruefung,
+    );
     $validated = $this->validate($rules);
 
     if ($this->category->form === TicketFormType::ItGestuetztePruefung) {
-        $termin = BueLaravel::getTicketPruefungByTerminId((int) $validated['pruefungstermin_id']);
+        $terminIds = $isMultiPruefung
+            ? collect($validated['pruefungstermine'])->pluck('pruefungstermin_id')->map(fn ($id): int => (int) $id)
+            : collect([(int) $validated['pruefungstermin_id']]);
 
-        if ($termin === null) {
-            Flux::toast(heading: 'Fehler', text: 'Der gewählte Prüfungstermin ist ungültig.', variant: 'danger');
+        $resolved = $terminIds
+            ->map(fn (int $terminId) => BueLaravel::getTicketPruefungByTerminId($terminId))
+            ->filter();
+
+        if ($resolved->count() !== $terminIds->count()) {
+            Flux::toast(heading: 'Fehler', text: 'Mindestens ein gewählter Prüfungstermin ist ungültig.', variant: 'danger');
+
+            return;
+        }
+
+        $pruefungIds = $resolved
+            ->map(fn (object $row): int => (int) $row->pruefung_id)
+            ->unique()
+            ->values();
+
+        if ($pruefungIds->count() > 1) {
+            Flux::toast(
+                heading: 'Fehler',
+                text: 'Es können nur Termine derselben Prüfung gemeinsam ausgewählt werden.',
+                variant: 'danger',
+            );
 
             return;
         }

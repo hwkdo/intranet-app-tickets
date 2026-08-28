@@ -311,6 +311,7 @@ test('it gestuetzte pruefung create form loads termin list from bue', function (
             ->once()
             ->andReturn(collect([(object) [
                 'termin_id' => 1247861,
+                'pruefung_id' => 9001,
                 'pruefung_bezeichnung' => 'FKB VZ 7 Sommer 2026',
                 'termin_bezeichnung' => 'schriftliche Prüfung EDV-gestützt',
                 'ordnung' => 'Kaufmännische Betriebsführung',
@@ -337,10 +338,162 @@ test('it gestuetzte pruefung create form loads termin list from bue', function (
         ->call('loadPruefungen')
         ->assertSet('pruefung_step', 2)
         ->assertSee('FKB VZ 7 Sommer 2026')
-        ->call('selectPruefungTermin', 1247861)
+        ->call('togglePruefungTermin', 1247861)
+        ->assertSet('pruefung_selected_ids', [1247861])
+        ->call('confirmPruefungTermine')
         ->assertSet('pruefung_step', 3)
         ->assertSet('pruefungstermin_id', 1247861)
         ->assertSet('gewerk', 'Kaufmännische Betriebsführung')
         ->assertSet('raeume', '1303, Bildungszentrum HWK Haus I')
         ->assertSee('Verwendete Anwendungen');
+});
+
+test('it gestuetzte pruefung allows multi select only for same pruefung id', function () {
+    $user = ticketsTestUser();
+    $category = TicketCategory::query()->where('slug', 'it-gestuetzte-pruefung')->firstOrFail();
+
+    $this->mock(BueLaravel::class, function ($mock): void {
+        $mock->shouldReceive('getTicketPruefungenByDatum')
+            ->once()
+            ->andReturn(collect([
+                (object) [
+                    'termin_id' => 1001,
+                    'pruefung_id' => 50,
+                    'pruefung_bezeichnung' => 'Prüfung A',
+                    'termin_bezeichnung' => 'Raum 1',
+                    'ordnung' => 'Maler',
+                    'uhrzeit_von' => '09:00',
+                    'uhrzeit_bis' => '10:00',
+                    'pruefungsort_name' => '1301',
+                    'gebaeudenummer' => 'Haus I',
+                    'raumnummer' => null,
+                    'anzahl_prueflinge' => 8,
+                    'bearbeiter_vorname' => 'Anna',
+                    'bearbeiter_nachname' => 'Admin',
+                    'bearbeiter_telefon' => '111',
+                    'bearbeiter_email' => 'a@example.com',
+                    'datum' => '2026-08-27 00:00:00',
+                ],
+                (object) [
+                    'termin_id' => 1002,
+                    'pruefung_id' => 50,
+                    'pruefung_bezeichnung' => 'Prüfung A',
+                    'termin_bezeichnung' => 'Raum 2',
+                    'ordnung' => 'Maler',
+                    'uhrzeit_von' => '09:00',
+                    'uhrzeit_bis' => '10:00',
+                    'pruefungsort_name' => '1302',
+                    'gebaeudenummer' => 'Haus I',
+                    'raumnummer' => null,
+                    'anzahl_prueflinge' => 12,
+                    'bearbeiter_vorname' => 'Anna',
+                    'bearbeiter_nachname' => 'Admin',
+                    'bearbeiter_telefon' => '111',
+                    'bearbeiter_email' => 'a@example.com',
+                    'datum' => '2026-08-27 00:00:00',
+                ],
+                (object) [
+                    'termin_id' => 2001,
+                    'pruefung_id' => 99,
+                    'pruefung_bezeichnung' => 'Prüfung B',
+                    'termin_bezeichnung' => 'Raum X',
+                    'ordnung' => 'Tischler',
+                    'uhrzeit_von' => '11:00',
+                    'uhrzeit_bis' => '12:00',
+                    'pruefungsort_name' => '2201',
+                    'gebaeudenummer' => 'Haus II',
+                    'raumnummer' => null,
+                    'anzahl_prueflinge' => 5,
+                    'bearbeiter_vorname' => 'Bert',
+                    'bearbeiter_nachname' => 'Bearbeiter',
+                    'bearbeiter_telefon' => '222',
+                    'bearbeiter_email' => 'b@example.com',
+                    'datum' => '2026-08-27 00:00:00',
+                ],
+            ]));
+    });
+
+    $this->actingAs($user);
+
+    Volt::test('apps.tickets.create.form', ['category' => $category])
+        ->set('pruefung_datum', '2026-08-27')
+        ->call('loadPruefungen')
+        ->call('togglePruefungTermin', 1001)
+        ->assertSet('pruefung_selected_ids', [1001])
+        ->assertSet('pruefung_selected_pruefung_id', 50)
+        ->call('togglePruefungTermin', 2001)
+        ->assertSet('pruefung_selected_ids', [1001])
+        ->call('togglePruefungTermin', 1002)
+        ->assertSet('pruefung_selected_ids', [1001, 1002])
+        ->call('confirmPruefungTermine')
+        ->assertSet('pruefung_step', 3)
+        ->assertSet('betreff', 'IT-gestützte Prüfung: Prüfung A (2 Räume)')
+        ->assertSet('pruefungstermine', [
+            [
+                'pruefungstermin_id' => 1001,
+                'raeume' => '1301, Haus I',
+                'anzahl_teilnehmer' => 8,
+            ],
+            [
+                'pruefungstermin_id' => 1002,
+                'raeume' => '1302, Haus I',
+                'anzahl_teilnehmer' => 12,
+            ],
+        ])
+        ->assertSet('pruefungstermin_id', null);
+});
+
+test('it gestuetzte pruefung multi ticket body lists rooms separately', function () {
+    $user = ticketsTestUser();
+
+    $category = TicketCategory::query()->where('slug', 'it-gestuetzte-pruefung')->firstOrFail();
+    $category->update(['zammad_group_id' => 42]);
+
+    $this->mock(ZammadUserResolver::class, function ($mock): void {
+        $mock->shouldReceive('resolveCustomerId')->andReturn(99);
+    });
+
+    $this->mock(ZammadTicketService::class, function ($mock): void {
+        $mock->shouldReceive('createTicket')->once()->andReturn(889);
+    });
+
+    $request = app(TicketSubmissionService::class)->submit(
+        category: $category,
+        formData: [
+            'betreff' => 'IT-gestützte Prüfung: Prüfung A (2 Räume)',
+            'pruefungstermine' => [
+                [
+                    'pruefungstermin_id' => 1001,
+                    'raeume' => '1301, Haus I',
+                    'anzahl_teilnehmer' => 8,
+                ],
+                [
+                    'pruefungstermin_id' => 1002,
+                    'raeume' => '1302, Haus I',
+                    'anzahl_teilnehmer' => 12,
+                ],
+            ],
+            'datum' => '2026-08-27',
+            'gewerk' => 'Maler',
+            'ansprechpartner' => 'Anna Admin',
+            'verwendete_anwendungen' => 'Moodle',
+        ],
+        files: [],
+        requester: $user,
+    );
+
+    expect($request->fresh()->status)->toBe(TicketRequestStatus::Dispatched)
+        ->and($request->subject)->toBe('IT-gestützte Prüfung: Prüfung A (2 Räume)')
+        ->and($request->body)->toContain('Die Prüfung findet in 2 Räumen statt.')
+        ->and($request->body)->toContain('PrüfungsterminID: 1001')
+        ->and($request->body)->toContain('Raum: 1301, Haus I')
+        ->and($request->body)->toContain('Anzahl Teilnehmer: 8')
+        ->and($request->body)->toContain('PrüfungsterminID: 1002')
+        ->and($request->body)->toContain('Raum: 1302, Haus I')
+        ->and($request->body)->toContain('Anzahl Teilnehmer: 12')
+        ->and($request->body)->toContain('Gewerk (Ordnung): Maler')
+        ->and($request->body)->toContain('Verwendete Anwendungen: Moodle')
+        ->and($request->body)->not->toContain('Räume:')
+        ->and($request->form_data)->toHaveKey('pruefungstermine')
+        ->and($request->form_data)->not->toHaveKey('pruefungstermin_id');
 });

@@ -143,5 +143,42 @@ test('it gestuetzte pruefung body uses german labels', function (): void {
         ->toContain('Gewerk (Ordnung): Maler')
         ->toContain('Verwendete Anwendungen: Moodle')
         ->toContain('Sperre Prüfungsbenutzer ab: 2026-08-28 18:00')
-        ->toContain('Ansprechpartner: Susanne Potthoff');
+        ->toContain('Ansprechpartner: Susanne Potthoff')
+        ->not->toContain('Die Prüfung findet in');
+});
+
+test('it gestuetzte pruefung multi body lists rooms then shared fields', function (): void {
+    $validation = app(TicketFormValidation::class);
+    $builder = app(TicketBodyBuilder::class);
+
+    $formData = $validation->filterFormData(TicketFormType::ItGestuetztePruefung, [
+        'betreff' => 'IT-gestützte Prüfung: Test (2 Räume)',
+        'pruefungstermine' => [
+            [
+                'pruefungstermin_id' => 1001,
+                'raeume' => '1301',
+                'anzahl_teilnehmer' => 8,
+            ],
+            [
+                'pruefungstermin_id' => 1002,
+                'raeume' => '1302',
+                'anzahl_teilnehmer' => 12,
+            ],
+        ],
+        'datum' => '2026-08-27',
+        'gewerk' => 'Maler',
+        'ansprechpartner' => 'Susanne Potthoff',
+        'verwendete_anwendungen' => 'Moodle',
+    ]);
+
+    $body = $builder->build('', $formData);
+
+    expect($formData)->toHaveKey('pruefungstermine')
+        ->and($formData)->not->toHaveKey('pruefungstermin_id')
+        ->and($body)->toStartWith('Die Prüfung findet in 2 Räumen statt.')
+        ->and($body)->toContain("PrüfungsterminID: 1001\n\nRaum: 1301\n\nAnzahl Teilnehmer: 8")
+        ->and($body)->toContain("PrüfungsterminID: 1002\n\nRaum: 1302\n\nAnzahl Teilnehmer: 12")
+        ->and($body)->toContain('Datum: 2026-08-27')
+        ->and($body)->toContain('Gewerk (Ordnung): Maler')
+        ->and($body)->not->toContain('Räume:');
 });

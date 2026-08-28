@@ -53,6 +53,7 @@ class TicketBodyBuilder
             'attachments',
             '_token',
             '_method',
+            'pruefungstermine',
         ];
 
         if ($ansprechpartnerName !== null) {
@@ -61,6 +62,20 @@ class TicketBodyBuilder
 
         $exclude = array_merge($defaultExclude, $excludeKeys);
 
+        if ($this->isMultiPruefung($formData)) {
+            /** @var list<array{pruefungstermin_id: mixed, raeume: mixed, anzahl_teilnehmer: mixed}> $termine */
+            $termine = array_values($formData['pruefungstermine']);
+            $count = count($termine);
+
+            $body = $this->appendLine($body, 'Die Prüfung findet in '.$count.' Räumen statt.');
+
+            foreach ($termine as $termin) {
+                $body = $this->appendLine($body, 'PrüfungsterminID: '.(string) $termin['pruefungstermin_id']);
+                $body = $this->appendLine($body, 'Raum: '.(string) $termin['raeume']);
+                $body = $this->appendLine($body, 'Anzahl Teilnehmer: '.(string) $termin['anzahl_teilnehmer']);
+            }
+        }
+
         foreach ($formData as $key => $value) {
             if (in_array($key, $exclude, true) || $value === null || $value === '') {
                 continue;
@@ -68,6 +83,10 @@ class TicketBodyBuilder
 
             if (is_bool($value)) {
                 $value = $value ? 'Ja' : 'Nein';
+            }
+
+            if (is_array($value)) {
+                continue;
             }
 
             $label = self::FIELD_LABELS[$key] ?? ucfirst(str_replace('_', ' ', (string) $key));
@@ -105,6 +124,16 @@ class TicketBodyBuilder
         }
 
         return $subject;
+    }
+
+    /**
+     * @param  array<string, mixed>  $formData
+     */
+    private function isMultiPruefung(array $formData): bool
+    {
+        return isset($formData['pruefungstermine'])
+            && is_array($formData['pruefungstermine'])
+            && count($formData['pruefungstermine']) > 1;
     }
 
     private function appendLine(string $body, string $line): string
