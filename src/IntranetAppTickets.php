@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTickets;
 
+use Hwkdo\IntranetAppBase\Data\ManualDefinition;
 use Hwkdo\IntranetAppBase\Data\NotificationTypeDefinition;
 use Hwkdo\IntranetAppBase\Data\TourDefinition;
 use Hwkdo\IntranetAppBase\Interfaces\IntranetAppInterface;
+use Hwkdo\IntranetAppBase\Interfaces\ProvidesManualsInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesNotificationsInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesTasksInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesToursInterface;
@@ -17,7 +19,7 @@ use Hwkdo\IntranetAppTickets\Tasks\PendingApprovalsTaskProvider;
 use Hwkdo\IntranetAppTickets\Tasks\UnreadTicketsTaskProvider;
 use Illuminate\Support\Collection;
 
-class IntranetAppTickets implements IntranetAppInterface, ProvidesNotificationsInterface, ProvidesTasksInterface, ProvidesToursInterface
+class IntranetAppTickets implements IntranetAppInterface, ProvidesManualsInterface, ProvidesNotificationsInterface, ProvidesTasksInterface, ProvidesToursInterface
 {
     public static function app_name(): string
     {
@@ -117,6 +119,25 @@ class IntranetAppTickets implements IntranetAppInterface, ProvidesNotificationsI
                 stepsModule: 'tickets/onboarding',
                 sort: 100,
                 version: 1,
+            ),
+        ];
+    }
+
+    public static function manuals(): array
+    {
+        return [
+            new ManualDefinition(
+                key: 'tickets.onboarding',
+                title: 'Tickets-App – Bedienungsanleitung',
+                description: 'Schritt-für-Schritt-Anleitung zur Tickets-App: Übersicht, Updates, Detailseite und neues Ticket.',
+                group: 'app',
+                appIdentifier: self::identifier(),
+                appName: self::app_name(),
+                contentView: 'intranet-app-tickets::manuals.onboarding.index',
+                relatedTourKey: 'tickets.onboarding',
+                sort: 100,
+                version: 1,
+                isPrimary: true,
             ),
         ];
     }

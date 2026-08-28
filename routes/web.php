@@ -21,6 +21,7 @@ Route::middleware(['web', 'auth', 'can:see-app-tickets'])->group(function () {
     Volt::route('apps/tickets/requests/{ticketRequest}', 'apps.tickets.requests.show')->name('apps.tickets.requests.show');
     Volt::route('apps/tickets/settings/user', 'apps.tickets.settings.user')->name('apps.tickets.settings.user');
     Volt::route('apps/tickets/info', 'apps.tickets.info')->name('apps.tickets.info');
+    Volt::route('apps/tickets/manual', 'apps.tickets.manual')->name('apps.tickets.manual');
 
     Route::post('apps/tickets/tour/demo/enable', [TicketTourDemoController::class, 'enable'])
         ->name('apps.tickets.tour.demo.enable');

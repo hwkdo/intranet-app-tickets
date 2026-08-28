@@ -20,6 +20,7 @@
             'buttonText' => 'Genehmigungen öffnen',
         ]] : []),
         ['label' => 'Meine Einstellungen', 'href' => route('apps.tickets.settings.user'), 'icon' => 'cog-6-tooth', 'description' => 'Persönliche Einstellungen anpassen', 'buttonText' => 'Einstellungen öffnen'],
+        ['label' => 'Bedienungsanleitung', 'href' => route('apps.tickets.manual'), 'icon' => 'book-open', 'description' => 'Ausführliche Anleitung zur Tickets-App', 'buttonText' => 'Anleitung öffnen'],
         ['label' => 'App-Info', 'href' => route('apps.tickets.info'), 'icon' => 'information-circle', 'description' => 'Installierte Version und Release-Historie', 'buttonText' => 'App-Info anzeigen'],
         ['label' => 'Webhooks', 'href' => route('apps.tickets.webhooks.index'), 'icon' => 'bell', 'description' => 'Eingegangene Zammad-Webhooks', 'buttonText' => 'Webhooks öffnen', 'permission' => 'manage-app-tickets'],
         ['label' => 'Admin', 'href' => route('apps.tickets.admin.index'), 'icon' => 'shield-check', 'description' => 'Administrationsbereich verwalten', 'buttonText' => 'Admin öffnen', 'permission' => 'manage-app-tickets']
