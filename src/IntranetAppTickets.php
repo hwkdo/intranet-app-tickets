@@ -13,7 +13,6 @@ use Hwkdo\IntranetAppBase\Interfaces\ProvidesNotificationsInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesTasksInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesToursInterface;
 use Hwkdo\IntranetAppTickets\Data\AppSettings;
-use Hwkdo\IntranetAppTickets\Data\UserSettings;
 use Hwkdo\IntranetAppTickets\Mcp\Servers\TicketsServer;
 use Hwkdo\IntranetAppTickets\Tasks\PendingApprovalsTaskProvider;
 use Hwkdo\IntranetAppTickets\Tasks\UnreadTicketsTaskProvider;
@@ -48,7 +47,7 @@ class IntranetAppTickets implements IntranetAppInterface, ProvidesManualsInterfa
 
     public static function userSettingsClass(): ?string
     {
-        return UserSettings::class;
+        return null;
     }
 
     public static function appSettingsClass(): ?string
