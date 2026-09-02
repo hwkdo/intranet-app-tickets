@@ -42,15 +42,23 @@
             <div class="space-y-3">
                 @foreach ($pruefung_termine as $termin)
                     @php
-                        $selectedIds = array_map('intval', $pruefung_selected_ids);
-                        $isSelected = in_array((int) $termin['termin_id'], $selectedIds, true);
+                        $selectedKeys = array_map('strval', $pruefung_selected_ids);
+                        $isSelected = in_array((string) $termin['selection_key'], $selectedKeys, true);
                         $isDisabled = $pruefung_selected_pruefung_id !== null
                             && (int) ($termin['pruefung_id'] ?? 0) !== (int) $pruefung_selected_pruefung_id;
+                        $raum = collect([
+                            $termin['pruefungsort_name'],
+                            $termin['gebaeudenummer'],
+                            $termin['raumnummer'],
+                        ])->filter(fn ($value) => $value !== null && $value !== '')->implode(', ');
+                        if ($raum === '' && ($termin['termin_bezeichnung'] ?? '') !== '') {
+                            $raum = $termin['termin_bezeichnung'];
+                        }
                     @endphp
                     <button
                         type="button"
                         @if ($isDisabled) disabled @endif
-                        wire:click="togglePruefungTermin({{ $termin['termin_id'] }})"
+                        wire:click="togglePruefungTermin({{ json_encode($termin['selection_key']) }})"
                         @class([
                             'w-full rounded-lg border p-4 text-left transition',
                             'border-accent bg-accent/5 ring-1 ring-accent' => $isSelected,
@@ -68,14 +76,27 @@
                                 <flux:badge color="zinc" size="sm">Andere Prüfung</flux:badge>
                             @endif
                         </div>
-                        <div class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                            @if ($termin['termin_bezeichnung'] !== '' && $termin['pruefung_bezeichnung'] !== '')
+
+                        @if ($raum !== '')
+                            <div @class([
+                                'mt-3 flex items-center gap-2 rounded-md border px-3 py-2',
+                                'border-accent/50 bg-accent/15' => $isSelected,
+                                'border-zinc-300 bg-zinc-900/[0.04] dark:border-white/25 dark:bg-white/10' => ! $isSelected,
+                            ])>
+                                <flux:icon icon="building-office-2" class="size-5 shrink-0 text-accent" />
+                                <span class="text-base font-semibold tracking-tight text-zinc-800 dark:text-white">
+                                    Raum: {{ $raum }}
+                                </span>
+                            </div>
+                        @endif
+
+                        <div class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                            @if ($termin['termin_bezeichnung'] !== '' && $termin['pruefung_bezeichnung'] !== '' && $termin['termin_bezeichnung'] !== $raum)
                                 {{ $termin['termin_bezeichnung'] }} ·
                             @endif
                             @if ($termin['uhrzeit_von'] !== '' || $termin['uhrzeit_bis'] !== '')
-                                {{ $termin['uhrzeit_von'] }}@if ($termin['uhrzeit_bis'] !== '')–{{ $termin['uhrzeit_bis'] }}@endif ·
+                                {{ $termin['uhrzeit_von'] }}@if ($termin['uhrzeit_bis'] !== '')–{{ $termin['uhrzeit_bis'] }}@endif
                             @endif
-                            {{ collect([$termin['pruefungsort_name'], $termin['gebaeudenummer'], $termin['raumnummer']])->filter()->implode(', ') }}
                         </div>
                         <div class="mt-1 text-sm text-zinc-500">
                             {{ $termin['ordnung'] }}

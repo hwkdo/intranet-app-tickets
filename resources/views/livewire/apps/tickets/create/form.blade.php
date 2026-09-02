@@ -124,17 +124,60 @@ $removeAttachment = function (int $index): void {
     }
 };
 
-$mapPruefungTerminRow = function (object|array $row): array {
-    $data = is_array($row) ? $row : (array) $row;
+$buildPruefungTerminSelectionKey = function (array $data): string {
+    $terminId = (int) ($data['termin_id'] ?? 0);
+    $lfdnr = $data['termin_lfdnr'] ?? null;
 
-    return [
+    if ($lfdnr !== null && $lfdnr !== '' && (int) $lfdnr > 0) {
+        return $terminId.'-'.(int) $lfdnr;
+    }
+
+    $parts = array_filter([
+        (string) $terminId,
+        isset($data['pruefungsort_id']) && $data['pruefungsort_id'] !== '' ? (string) $data['pruefungsort_id'] : null,
+        ($data['pruefungsort_name'] ?? '') !== '' ? (string) $data['pruefungsort_name'] : null,
+        ($data['gebaeudenummer'] ?? '') !== '' ? (string) $data['gebaeudenummer'] : null,
+        ($data['raumnummer'] ?? '') !== '' ? (string) $data['raumnummer'] : null,
+        ($data['termin_bezeichnung'] ?? '') !== '' ? (string) $data['termin_bezeichnung'] : null,
+        ($data['uhrzeit_von'] ?? '') !== '' ? (string) $data['uhrzeit_von'] : null,
+        ($data['uhrzeit_bis'] ?? '') !== '' ? (string) $data['uhrzeit_bis'] : null,
+    ], fn (?string $part): bool => $part !== null && $part !== '');
+
+    return implode('|', $parts);
+};
+
+$ensureUniquePruefungTerminSelectionKeys = function (array $termine) use ($buildPruefungTerminSelectionKey): array {
+    $keyCounts = [];
+
+    foreach ($termine as $index => $termin) {
+        $key = $buildPruefungTerminSelectionKey($termin);
+
+        if (array_key_exists($key, $keyCounts)) {
+            $keyCounts[$key]++;
+            $key = $key.'#'.$keyCounts[$key];
+        } else {
+            $keyCounts[$key] = 0;
+        }
+
+        $termine[$index]['selection_key'] = $key;
+    }
+
+    return $termine;
+};
+
+$mapPruefungTerminRow = function (object|array $row) use ($buildPruefungTerminSelectionKey): array {
+    $data = array_change_key_case(is_array($row) ? $row : (array) $row, CASE_LOWER);
+
+    $mapped = [
         'termin_id' => (int) ($data['termin_id'] ?? 0),
+        'termin_lfdnr' => isset($data['termin_lfdnr']) ? (int) $data['termin_lfdnr'] : null,
         'pruefung_id' => isset($data['pruefung_id']) ? (int) $data['pruefung_id'] : null,
         'pruefung_bezeichnung' => (string) ($data['pruefung_bezeichnung'] ?? ''),
         'termin_bezeichnung' => (string) ($data['termin_bezeichnung'] ?? ''),
         'ordnung' => (string) ($data['ordnung'] ?? ''),
         'uhrzeit_von' => (string) ($data['uhrzeit_von'] ?? ''),
         'uhrzeit_bis' => (string) ($data['uhrzeit_bis'] ?? ''),
+        'pruefungsort_id' => isset($data['pruefungsort_id']) ? (int) $data['pruefungsort_id'] : null,
         'pruefungsort_name' => (string) ($data['pruefungsort_name'] ?? ''),
         'gebaeudenummer' => (string) ($data['gebaeudenummer'] ?? ''),
         'raumnummer' => (string) ($data['raumnummer'] ?? ''),
@@ -145,6 +188,10 @@ $mapPruefungTerminRow = function (object|array $row): array {
         'bearbeiter_email' => (string) ($data['bearbeiter_email'] ?? ''),
         'datum' => (string) ($data['datum'] ?? ''),
     ];
+
+    $mapped['selection_key'] = $buildPruefungTerminSelectionKey($mapped);
+
+    return $mapped;
 };
 
 $formatPruefungRaum = function (array $termin): string {
@@ -175,15 +222,15 @@ $loadPruefungen = function (): void {
         ->values()
         ->all();
 
-    $this->pruefung_termine = $termine;
+    $this->pruefung_termine = $this->ensureUniquePruefungTerminSelectionKeys($termine);
     $this->pruefung_selected_ids = [];
     $this->pruefung_selected_pruefung_id = null;
     $this->pruefung_step = 2;
 };
 
-$togglePruefungTermin = function (int $terminId): void {
+$togglePruefungTermin = function (string $selectionKey): void {
     $termin = collect($this->pruefung_termine)
-        ->first(fn (array $row): bool => (int) $row['termin_id'] === $terminId);
+        ->first(fn (array $row): bool => $row['selection_key'] === $selectionKey);
 
     if ($termin === null) {
         Flux::toast(heading: 'Fehler', text: 'Der gewählte Prüfungstermin wurde nicht gefunden.', variant: 'danger');
@@ -191,13 +238,13 @@ $togglePruefungTermin = function (int $terminId): void {
         return;
     }
 
-    $selectedIds = collect($this->pruefung_selected_ids)->map(fn ($id): int => (int) $id)->all();
-    $isSelected = in_array($terminId, $selectedIds, true);
+    $selectedKeys = collect($this->pruefung_selected_ids)->map(fn ($key): string => (string) $key)->all();
+    $isSelected = in_array($selectionKey, $selectedKeys, true);
 
     if ($isSelected) {
-        $selectedIds = array_values(array_filter($selectedIds, fn (int $id): bool => $id !== $terminId));
-        $this->pruefung_selected_ids = $selectedIds;
-        $this->pruefung_selected_pruefung_id = $selectedIds === []
+        $selectedKeys = array_values(array_filter($selectedKeys, fn (string $key): bool => $key !== $selectionKey));
+        $this->pruefung_selected_ids = $selectedKeys;
+        $this->pruefung_selected_pruefung_id = $selectedKeys === []
             ? null
             : (int) $this->pruefung_selected_pruefung_id;
 
@@ -216,26 +263,26 @@ $togglePruefungTermin = function (int $terminId): void {
         return;
     }
 
-    $selectedIds[] = $terminId;
-    $this->pruefung_selected_ids = $selectedIds;
+    $selectedKeys[] = $selectionKey;
+    $this->pruefung_selected_ids = $selectedKeys;
     $this->pruefung_selected_pruefung_id = $pruefungId;
 };
 
 $confirmPruefungTermine = function (): void {
-    $selectedIds = collect($this->pruefung_selected_ids)->map(fn ($id): int => (int) $id)->unique()->values();
+    $selectedKeys = collect($this->pruefung_selected_ids)->map(fn ($key): string => (string) $key)->unique()->values();
 
-    if ($selectedIds->isEmpty()) {
+    if ($selectedKeys->isEmpty()) {
         Flux::toast(heading: 'Hinweis', text: 'Bitte mindestens einen Prüfungstermin auswählen.', variant: 'warning');
 
         return;
     }
 
     $selectedTermine = collect($this->pruefung_termine)
-        ->filter(fn (array $termin): bool => $selectedIds->contains((int) $termin['termin_id']))
-        ->sortBy(fn (array $termin): int => $selectedIds->search((int) $termin['termin_id']))
+        ->filter(fn (array $termin): bool => $selectedKeys->contains($termin['selection_key']))
+        ->sortBy(fn (array $termin): int => (int) $selectedKeys->search($termin['selection_key']))
         ->values();
 
-    if ($selectedTermine->count() !== $selectedIds->count()) {
+    if ($selectedTermine->count() !== $selectedKeys->count()) {
         Flux::toast(heading: 'Fehler', text: 'Mindestens ein gewählter Prüfungstermin ist ungültig.', variant: 'danger');
 
         return;

@@ -341,8 +341,8 @@ test('it gestuetzte pruefung create form loads termin list from bue', function (
         ->call('loadPruefungen')
         ->assertSet('pruefung_step', 2)
         ->assertSee('FKB VZ 7 Sommer 2026')
-        ->call('togglePruefungTermin', 1247861)
-        ->assertSet('pruefung_selected_ids', [1247861])
+        ->call('togglePruefungTermin', '1247861|1303|Bildungszentrum HWK Haus I|schriftliche Prüfung EDV-gestützt|09:00|10:00')
+        ->assertSet('pruefung_selected_ids', ['1247861|1303|Bildungszentrum HWK Haus I|schriftliche Prüfung EDV-gestützt|09:00|10:00'])
         ->call('confirmPruefungTermine')
         ->assertSet('pruefung_step', 3)
         ->assertSet('pruefungstermin_id', 1247861)
@@ -422,13 +422,13 @@ test('it gestuetzte pruefung allows multi select only for same pruefung id', fun
     Volt::test('apps.tickets.create.form', ['category' => $category])
         ->set('pruefung_datum', '2026-08-27')
         ->call('loadPruefungen')
-        ->call('togglePruefungTermin', 1001)
-        ->assertSet('pruefung_selected_ids', [1001])
+        ->call('togglePruefungTermin', '1001|1301|Haus I|Raum 1|09:00|10:00')
+        ->assertSet('pruefung_selected_ids', ['1001|1301|Haus I|Raum 1|09:00|10:00'])
         ->assertSet('pruefung_selected_pruefung_id', 50)
-        ->call('togglePruefungTermin', 2001)
-        ->assertSet('pruefung_selected_ids', [1001])
-        ->call('togglePruefungTermin', 1002)
-        ->assertSet('pruefung_selected_ids', [1001, 1002])
+        ->call('togglePruefungTermin', '2001|2201|Haus II|Raum X|11:00|12:00')
+        ->assertSet('pruefung_selected_ids', ['1001|1301|Haus I|Raum 1|09:00|10:00'])
+        ->call('togglePruefungTermin', '1002|1302|Haus I|Raum 2|09:00|10:00')
+        ->assertSet('pruefung_selected_ids', ['1001|1301|Haus I|Raum 1|09:00|10:00', '1002|1302|Haus I|Raum 2|09:00|10:00'])
         ->call('confirmPruefungTermine')
         ->assertSet('pruefung_step', 3)
         ->assertSet('betreff', 'IT-gestützte Prüfung: Prüfung A (2 Räume)')
@@ -446,6 +446,175 @@ test('it gestuetzte pruefung allows multi select only for same pruefung id', fun
             ],
         ])
         ->assertSet('pruefungstermin_id', null);
+});
+
+test('it gestuetzte pruefung allows selecting individual rooms with same termin id', function () {
+    $user = ticketsTestUser();
+    $category = TicketCategory::query()->where('slug', 'it-gestuetzte-pruefung')->firstOrFail();
+
+    $this->mock(BueLaravel::class, function ($mock): void {
+        $mock->shouldReceive('getTicketPruefungenByDatum')
+            ->once()
+            ->andReturn(collect([
+                (object) [
+                    'termin_id' => 5000,
+                    'termin_lfdnr' => 1,
+                    'pruefung_id' => 77,
+                    'pruefung_bezeichnung' => 'Orthopädietechniker WH Sommer 2026',
+                    'termin_bezeichnung' => 'Raum A',
+                    'ordnung' => 'Orthopädietechnik',
+                    'uhrzeit_von' => '08:00',
+                    'uhrzeit_bis' => '12:00',
+                    'pruefungsort_name' => '1301',
+                    'gebaeudenummer' => 'Haus I',
+                    'raumnummer' => '101',
+                    'anzahl_prueflinge' => 6,
+                    'bearbeiter_vorname' => 'Max',
+                    'bearbeiter_nachname' => 'Mustermann',
+                    'bearbeiter_telefon' => '123',
+                    'bearbeiter_email' => 'max@example.com',
+                    'datum' => '2026-09-04 00:00:00',
+                ],
+                (object) [
+                    'termin_id' => 5000,
+                    'termin_lfdnr' => 2,
+                    'pruefung_id' => 77,
+                    'pruefung_bezeichnung' => 'Orthopädietechniker WH Sommer 2026',
+                    'termin_bezeichnung' => 'Raum B',
+                    'ordnung' => 'Orthopädietechnik',
+                    'uhrzeit_von' => '08:00',
+                    'uhrzeit_bis' => '12:00',
+                    'pruefungsort_name' => '1302',
+                    'gebaeudenummer' => 'Haus I',
+                    'raumnummer' => '102',
+                    'anzahl_prueflinge' => 8,
+                    'bearbeiter_vorname' => 'Max',
+                    'bearbeiter_nachname' => 'Mustermann',
+                    'bearbeiter_telefon' => '123',
+                    'bearbeiter_email' => 'max@example.com',
+                    'datum' => '2026-09-04 00:00:00',
+                ],
+                (object) [
+                    'termin_id' => 5000,
+                    'termin_lfdnr' => 3,
+                    'pruefung_id' => 77,
+                    'pruefung_bezeichnung' => 'Orthopädietechniker WH Sommer 2026',
+                    'termin_bezeichnung' => 'Raum C',
+                    'ordnung' => 'Orthopädietechnik',
+                    'uhrzeit_von' => '08:00',
+                    'uhrzeit_bis' => '12:00',
+                    'pruefungsort_name' => '1303',
+                    'gebaeudenummer' => 'Haus I',
+                    'raumnummer' => '103',
+                    'anzahl_prueflinge' => 7,
+                    'bearbeiter_vorname' => 'Max',
+                    'bearbeiter_nachname' => 'Mustermann',
+                    'bearbeiter_telefon' => '123',
+                    'bearbeiter_email' => 'max@example.com',
+                    'datum' => '2026-09-04 00:00:00',
+                ],
+            ]));
+    });
+
+    $this->actingAs($user);
+
+    Volt::test('apps.tickets.create.form', ['category' => $category])
+        ->set('pruefung_datum', '2026-09-04')
+        ->call('loadPruefungen')
+        ->call('togglePruefungTermin', '5000-1')
+        ->assertSet('pruefung_selected_ids', ['5000-1'])
+        ->call('togglePruefungTermin', '5000-2')
+        ->assertSet('pruefung_selected_ids', ['5000-1', '5000-2'])
+        ->call('togglePruefungTermin', '5000-1')
+        ->assertSet('pruefung_selected_ids', ['5000-2'])
+        ->call('confirmPruefungTermine')
+        ->assertSet('pruefung_step', 3)
+        ->assertSet('pruefungstermin_id', 5000)
+        ->assertSet('raeume', '1302, Haus I, 102');
+});
+
+test('it gestuetzte pruefung distinguishes rows with same termin id and termin lfdnr zero', function () {
+    $user = ticketsTestUser();
+    $category = TicketCategory::query()->where('slug', 'it-gestuetzte-pruefung')->firstOrFail();
+
+    $this->mock(BueLaravel::class, function ($mock): void {
+        $mock->shouldReceive('getTicketPruefungenByDatum')
+            ->once()
+            ->andReturn(collect([
+                (object) [
+                    'termin_id' => 5000,
+                    'termin_lfdnr' => 0,
+                    'pruefung_id' => 77,
+                    'pruefung_bezeichnung' => 'Orthopädietechniker WH Sommer 2026',
+                    'termin_bezeichnung' => 'Abnahme und Bewertung der Meisterprüfungsarbeit',
+                    'ordnung' => 'Orthopädietechnikerhandwerk',
+                    'uhrzeit_von' => '09:00',
+                    'uhrzeit_bis' => '13:00',
+                    'pruefungsort_name' => '2309',
+                    'gebaeudenummer' => 'Bildungszentrum HWK Haus II',
+                    'raumnummer' => null,
+                    'anzahl_prueflinge' => 4,
+                    'bearbeiter_vorname' => 'Max',
+                    'bearbeiter_nachname' => 'Mustermann',
+                    'bearbeiter_telefon' => '123',
+                    'bearbeiter_email' => 'max@example.com',
+                    'datum' => '2026-09-04 00:00:00',
+                ],
+                (object) [
+                    'termin_id' => 5000,
+                    'termin_lfdnr' => 0,
+                    'pruefung_id' => 77,
+                    'pruefung_bezeichnung' => 'Orthopädietechniker WH Sommer 2026',
+                    'termin_bezeichnung' => 'Abnahme und Bewertung der Meisterprüfungsarbeit',
+                    'ordnung' => 'Orthopädietechnikerhandwerk',
+                    'uhrzeit_von' => '09:00',
+                    'uhrzeit_bis' => '13:00',
+                    'pruefungsort_name' => '2305',
+                    'gebaeudenummer' => 'Bildungszentrum HWK Haus II',
+                    'raumnummer' => null,
+                    'anzahl_prueflinge' => 4,
+                    'bearbeiter_vorname' => 'Max',
+                    'bearbeiter_nachname' => 'Mustermann',
+                    'bearbeiter_telefon' => '123',
+                    'bearbeiter_email' => 'max@example.com',
+                    'datum' => '2026-09-04 00:00:00',
+                ],
+                (object) [
+                    'termin_id' => 5000,
+                    'termin_lfdnr' => 0,
+                    'pruefung_id' => 77,
+                    'pruefung_bezeichnung' => 'Orthopädietechniker WH Sommer 2026',
+                    'termin_bezeichnung' => 'Abnahme und Bewertung der Meisterprüfungsarbeit',
+                    'ordnung' => 'Orthopädietechnikerhandwerk',
+                    'uhrzeit_von' => '09:00',
+                    'uhrzeit_bis' => '13:00',
+                    'pruefungsort_name' => '2301',
+                    'gebaeudenummer' => 'Bildungszentrum HWK Haus II',
+                    'raumnummer' => null,
+                    'anzahl_prueflinge' => 4,
+                    'bearbeiter_vorname' => 'Max',
+                    'bearbeiter_nachname' => 'Mustermann',
+                    'bearbeiter_telefon' => '123',
+                    'bearbeiter_email' => 'max@example.com',
+                    'datum' => '2026-09-04 00:00:00',
+                ],
+            ]));
+    });
+
+    $this->actingAs($user);
+
+    $firstKey = '5000|2309|Bildungszentrum HWK Haus II|Abnahme und Bewertung der Meisterprüfungsarbeit|09:00|13:00';
+    $secondKey = '5000|2305|Bildungszentrum HWK Haus II|Abnahme und Bewertung der Meisterprüfungsarbeit|09:00|13:00';
+
+    Volt::test('apps.tickets.create.form', ['category' => $category])
+        ->set('pruefung_datum', '2026-09-04')
+        ->call('loadPruefungen')
+        ->call('togglePruefungTermin', $firstKey)
+        ->assertSet('pruefung_selected_ids', [$firstKey])
+        ->call('togglePruefungTermin', $secondKey)
+        ->assertSet('pruefung_selected_ids', [$firstKey, $secondKey])
+        ->call('togglePruefungTermin', $firstKey)
+        ->assertSet('pruefung_selected_ids', [$secondKey]);
 });
 
 test('it gestuetzte pruefung multi ticket body lists rooms separately', function () {
