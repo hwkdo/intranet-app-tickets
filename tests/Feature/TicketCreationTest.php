@@ -290,6 +290,7 @@ test('it gestuetzte pruefung ticket is dispatched via zammad without approval', 
             'ansprechpartner' => 'Susanne Potthoff, 0231 5493-511',
             'verwendete_anwendungen' => 'Moodle, Word',
             'weitere_wichtige_informationen' => 'Namensschilder vorhanden',
+            'personalisierte_pruefungsbenutzer' => 'Ja',
             'sperre_pruefungsbenutzer_ab' => '2026-08-28 18:00',
         ],
         files: [],
@@ -300,8 +301,10 @@ test('it gestuetzte pruefung ticket is dispatched via zammad without approval', 
         ->and($request->zammad_ticket_id)->toBe(888)
         ->and($request->form_data['pruefungstermin_id'])->toBe(1247861)
         ->and($request->form_data['pruefung_id'])->toBe(9001)
+        ->and($request->form_data['personalisierte_pruefungsbenutzer'])->toBe('Ja')
         ->and($request->body)->toContain('PrüfungID: 9001')
         ->and($request->body)->toContain('Verwendete Anwendungen: Moodle, Word')
+        ->and($request->body)->toContain('Personalisierte Prüfungsbenutzer: Ja')
         ->and($request->body)->toContain('Sperre Prüfungsbenutzer ab: 2026-08-28 18:00');
 });
 
@@ -349,6 +352,12 @@ test('it gestuetzte pruefung create form loads termin list from bue', function (
         ->assertSet('pruefung_id', 9001)
         ->assertSet('gewerk', 'Kaufmännische Betriebsführung')
         ->assertSet('raeume', '1303, Bildungszentrum HWK Haus I')
+        ->assertSet('personalisierte_pruefungsbenutzer', 'Nein')
+        ->assertSee('Werden personalisierte Prüfungsbenutzer benötigt?')
+        ->assertDontSee('Sperre Prüfungsbenutzer ab')
+        ->set('personalisierte_pruefungsbenutzer', 'Ja')
+        ->assertSee('Sperre Prüfungsbenutzer ab')
+        ->assertSee('Löschung Prüfungsbenutzer ab')
         ->assertSee('Verwendete Anwendungen');
 });
 

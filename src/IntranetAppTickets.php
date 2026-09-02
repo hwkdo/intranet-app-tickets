@@ -119,6 +119,20 @@ class IntranetAppTickets implements IntranetAppInterface, ProvidesManualsInterfa
                 sort: 100,
                 version: 1,
             ),
+            new TourDefinition(
+                key: 'tickets.it-gestuetzte-pruefung',
+                title: 'IT-gestützte Prüfung – Ticket anlegen',
+                description: 'Schritt für Schritt: Prüfungsdatum wählen, Termine/Räume auswählen und Ticket-Daten ergänzen.',
+                group: 'app',
+                appIdentifier: self::identifier(),
+                appName: self::app_name(),
+                routeName: 'apps.tickets.create.form',
+                routePath: 'apps/tickets/create/it-gestuetzte-pruefung',
+                stepsModule: 'tickets/it-gestuetzte-pruefung',
+                sort: 110,
+                version: 1,
+                mandatory: true,
+            ),
         ];
     }
 

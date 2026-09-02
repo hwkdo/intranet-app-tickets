@@ -1,5 +1,5 @@
 @if ($pruefung_step === 1)
-    <div class="space-y-4">
+    <div class="space-y-4" data-tour="pruefung-step-datum">
         <flux:heading size="sm">Wann findet die Prüfung statt?</flux:heading>
         <flux:date-picker
             wire:model="pruefung_datum"
@@ -12,7 +12,7 @@
         </flux:button>
     </div>
 @elseif ($pruefung_step === 2)
-    <div class="space-y-4">
+    <div class="space-y-4" data-tour="pruefung-step-termine">
         <div class="flex items-center justify-between gap-3">
             <flux:heading size="sm">Prüfungstermine wählen</flux:heading>
             <flux:button type="button" variant="ghost" size="sm" wire:click="pruefungZurueck">
@@ -120,7 +120,7 @@
         @endif
     </div>
 @else
-    <div class="space-y-4">
+    <div class="space-y-6" data-tour="pruefung-step-details">
         <div class="flex items-center justify-between gap-3">
             <flux:heading size="sm">Ticket-Daten prüfen und ergänzen</flux:heading>
             <flux:button type="button" variant="ghost" size="sm" wire:click="pruefungZurueck">
@@ -128,50 +128,69 @@
             </flux:button>
         </div>
 
-        <flux:input wire:model="betreff" label="Betreff" required />
+        <div
+            class="space-y-4 rounded-lg border border-zinc-200 p-4 dark:border-white/20 dark:bg-white/5"
+            data-tour="pruefung-bue-daten"
+        >
+            <flux:callout variant="info" icon="information-circle">
+                Diese Daten wurden aus BuE abgerufen und müssen nur in Ausnahmefällen bearbeitet werden.
+                In der Regel brauchen diese Daten nicht verändert zu werden.
+            </flux:callout>
 
-        @if (count($pruefungstermine) > 1)
-            <div class="space-y-4">
-                <flux:heading size="sm">Räume / Termine</flux:heading>
+            <flux:input wire:model="betreff" label="Betreff" required />
+
+            @if (count($pruefungstermine) > 1)
+                <div class="space-y-4">
+                    <flux:heading size="sm">Räume / Termine</flux:heading>
+                    <flux:input wire:model="pruefung_id" label="PrüfungID" required />
+                    @foreach ($pruefungstermine as $index => $eintrag)
+                        <div class="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+                            <flux:heading size="sm">Raum {{ $index + 1 }}</flux:heading>
+                            <flux:input
+                                wire:model="pruefungstermine.{{ $index }}.pruefungstermin_id"
+                                label="PrüfungsterminID"
+                                required
+                            />
+                            <flux:input
+                                wire:model="pruefungstermine.{{ $index }}.raeume"
+                                label="Raum"
+                                required
+                            />
+                            <flux:input
+                                wire:model="pruefungstermine.{{ $index }}.anzahl_teilnehmer"
+                                type="number"
+                                min="0"
+                                label="Anzahl Teilnehmer"
+                                required
+                            />
+                        </div>
+                    @endforeach
+                </div>
+
+                <flux:date-picker wire:model="datum" label="Datum" class="w-full" required />
+                <flux:textarea wire:model="gewerk" label="Gewerk (Ordnung)" rows="2" required />
+                <flux:input wire:model="ansprechpartner" label="Ansprechpartner" required />
+            @else
+                <flux:input wire:model="pruefungstermin_id" label="PrüfungsterminID" required />
                 <flux:input wire:model="pruefung_id" label="PrüfungID" required />
-                @foreach ($pruefungstermine as $index => $eintrag)
-                    <div class="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-                        <flux:heading size="sm">Raum {{ $index + 1 }}</flux:heading>
-                        <flux:input
-                            wire:model="pruefungstermine.{{ $index }}.pruefungstermin_id"
-                            label="PrüfungsterminID"
-                            required
-                        />
-                        <flux:input
-                            wire:model="pruefungstermine.{{ $index }}.raeume"
-                            label="Raum"
-                            required
-                        />
-                        <flux:input
-                            wire:model="pruefungstermine.{{ $index }}.anzahl_teilnehmer"
-                            type="number"
-                            min="0"
-                            label="Anzahl Teilnehmer"
-                            required
-                        />
-                    </div>
-                @endforeach
-            </div>
+                <flux:date-picker wire:model="datum" label="Datum" class="w-full" required />
+                <flux:textarea wire:model="gewerk" label="Gewerk (Ordnung)" rows="2" required />
+                <flux:input wire:model="raeume" label="Räume" required />
+                <flux:input wire:model="anzahl_teilnehmer" type="number" min="0" label="Anzahl Teilnehmer" required />
+                <flux:input wire:model="ansprechpartner" label="Ansprechpartner" required />
+            @endif
+        </div>
 
-            <flux:date-picker wire:model="datum" label="Datum" class="w-full" required />
-            <flux:textarea wire:model="gewerk" label="Gewerk (Ordnung)" rows="2" required />
-            <flux:input wire:model="ansprechpartner" label="Ansprechpartner" required />
-        @else
-            <flux:input wire:model="pruefungstermin_id" label="PrüfungsterminID" required />
-            <flux:input wire:model="pruefung_id" label="PrüfungID" required />
-            <flux:date-picker wire:model="datum" label="Datum" class="w-full" required />
-            <flux:textarea wire:model="gewerk" label="Gewerk (Ordnung)" rows="2" required />
-            <flux:input wire:model="raeume" label="Räume" required />
-            <flux:input wire:model="anzahl_teilnehmer" type="number" min="0" label="Anzahl Teilnehmer" required />
-            <flux:input wire:model="ansprechpartner" label="Ansprechpartner" required />
-        @endif
+        <div data-tour="pruefung-verwendete-anwendungen">
+            <flux:textarea
+                wire:model="verwendete_anwendungen"
+                label="Verwendete Anwendungen"
+                description="Gemeint sind vor allem Fachanwendungen, z. B. EuroFibu, AutoCAD, Dendrit, MFDach, AllPlan."
+                rows="3"
+                required
+            />
+        </div>
 
-        <flux:textarea wire:model="verwendete_anwendungen" label="Verwendete Anwendungen" rows="3" required />
         <flux:textarea
             wire:model="weitere_wichtige_informationen"
             label="Weitere Wichtige Informationen"
@@ -179,39 +198,65 @@
             placeholder="z.B. Namensschilder vorhanden, können abgeholt werden. O.ä."
         />
 
-        <div class="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-            <flux:heading size="sm">Sperre Prüfungsbenutzer ab</flux:heading>
-            <flux:text class="text-sm text-zinc-500">
-                Sperren im Sinne von den Schreibzugriff der Benutzer verhindern. Sie können ab dann nur noch Daten lesen.
-            </flux:text>
-            <div class="grid gap-4 md:grid-cols-2">
-                <flux:date-picker
-                    wire:model="sperre_pruefungsbenutzer_ab_datum"
-                    label="Datum"
-                    class="w-full"
-                />
-                <flux:time-picker
-                    wire:model="sperre_pruefungsbenutzer_ab_uhrzeit"
-                    label="Uhrzeit"
-                    time-format="24-hour"
-                />
-            </div>
-        </div>
+        <div
+            class="space-y-4 rounded-lg border border-zinc-200 p-4 dark:border-white/20 dark:bg-white/5"
+            data-tour="pruefung-personalisierte-benutzer"
+        >
+            <flux:radio.group
+                wire:model.live="personalisierte_pruefungsbenutzer"
+                label="Werden personalisierte Prüfungsbenutzer benötigt?"
+                description='Wenn nein, dann verwenden alle Prüflinge einen „allgemeinen Benutzer“ wie kfz, cnc, shk usw. Wenn ja, dann wird für jeden Prüfling ein eigener personalisierter Benutzer angelegt, der nur für die Prüfung verwendet wird.'
+                variant="segmented"
+            >
+                <flux:radio value="Nein" label="Nein" />
+                <flux:radio value="Ja" label="Ja" />
+            </flux:radio.group>
 
-        <div class="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
-            <flux:heading size="sm">Löschung Prüfungsbenutzer ab</flux:heading>
-            <div class="grid gap-4 md:grid-cols-2">
-                <flux:date-picker
-                    wire:model="loeschung_pruefungsbenutzer_ab_datum"
-                    label="Datum"
-                    class="w-full"
-                />
-                <flux:time-picker
-                    wire:model="loeschung_pruefungsbenutzer_ab_uhrzeit"
-                    label="Uhrzeit"
-                    time-format="24-hour"
-                />
-            </div>
+            @if ($personalisierte_pruefungsbenutzer === 'Ja')
+                <div class="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700" data-tour="pruefung-sperre">
+                    <flux:heading size="sm">Sperre Prüfungsbenutzer ab</flux:heading>
+                    <flux:text class="text-sm text-zinc-500 dark:text-zinc-300">
+                        Ab dem gewählten Zeitpunkt können die Prüflinge mit ihrem personalisierten Benutzer nicht mehr speichern.
+                        Dies soll verhindern, dass unerlaubte Daten für die Prüfung abgelegt werden.
+                    </flux:text>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <flux:date-picker
+                            wire:model="sperre_pruefungsbenutzer_ab_datum"
+                            label="Datum"
+                            class="w-full"
+                            required
+                        />
+                        <flux:time-picker
+                            wire:model="sperre_pruefungsbenutzer_ab_uhrzeit"
+                            label="Uhrzeit"
+                            time-format="24-hour"
+                            required
+                        />
+                    </div>
+                </div>
+
+                <div class="space-y-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-700" data-tour="pruefung-loeschung">
+                    <flux:heading size="sm">Löschung Prüfungsbenutzer ab</flux:heading>
+                    <flux:text class="text-sm text-zinc-500 dark:text-zinc-300">
+                        Ab dem gewählten Zeitpunkt werden die personalisierten Prüfungsbenutzer der Prüflinge gelöscht.
+                        Alle gespeicherten Daten werden gelöscht.
+                    </flux:text>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <flux:date-picker
+                            wire:model="loeschung_pruefungsbenutzer_ab_datum"
+                            label="Datum"
+                            class="w-full"
+                            required
+                        />
+                        <flux:time-picker
+                            wire:model="loeschung_pruefungsbenutzer_ab_uhrzeit"
+                            label="Uhrzeit"
+                            time-format="24-hour"
+                            required
+                        />
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 @endif

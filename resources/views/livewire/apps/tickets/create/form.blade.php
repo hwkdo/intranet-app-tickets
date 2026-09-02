@@ -13,9 +13,15 @@ use Hwkdo\IntranetAppTickets\Enums\TransmissionChannel;
 use Hwkdo\IntranetAppTickets\Models\TicketCategory;
 use Hwkdo\IntranetAppTickets\Services\TicketFormValidation;
 use Hwkdo\IntranetAppTickets\Services\TicketSubmissionService;
+use Hwkdo\IntranetAppTickets\Support\PruefungTourDemo;
 use Illuminate\Support\Facades\Auth;
 use Livewire\WithFileUploads;
-use function Livewire\Volt\{computed, mount, state, title, uses};
+
+use function Livewire\Volt\computed;
+use function Livewire\Volt\mount;
+use function Livewire\Volt\state;
+use function Livewire\Volt\title;
+use function Livewire\Volt\uses;
 
 uses([WithFileUploads::class]);
 
@@ -72,6 +78,7 @@ state([
     'anzahl_teilnehmer' => null,
     'verwendete_anwendungen' => '',
     'weitere_wichtige_informationen' => '',
+    'personalisierte_pruefungsbenutzer' => 'Nein',
     'sperre_pruefungsbenutzer_ab_datum' => '',
     'sperre_pruefungsbenutzer_ab_uhrzeit' => '',
     'loeschung_pruefungsbenutzer_ab_datum' => '',
@@ -217,7 +224,11 @@ $loadPruefungen = function (): void {
         'pruefung_datum' => 'Datum',
     ]);
 
-    $termine = BueLaravel::getTicketPruefungenByDatum($this->pruefung_datum)
+    $rows = PruefungTourDemo::isActive()
+        ? PruefungTourDemo::termineForDatum($this->pruefung_datum)
+        : BueLaravel::getTicketPruefungenByDatum($this->pruefung_datum);
+
+    $termine = $rows
         ->map(fn (object $row): array => $this->mapPruefungTerminRow($row))
         ->values()
         ->all();
@@ -356,6 +367,32 @@ $pruefungZurueck = function (): void {
     }
 };
 
+$resetPruefungForTour = function (): void {
+    if ($this->category->form !== TicketFormType::ItGestuetztePruefung) {
+        return;
+    }
+
+    $this->pruefung_step = 1;
+    $this->pruefung_datum = '';
+    $this->pruefung_termine = [];
+    $this->pruefung_selected_ids = [];
+    $this->pruefung_selected_pruefung_id = null;
+    $this->pruefungstermin_id = null;
+    $this->pruefung_id = null;
+    $this->pruefungstermine = [];
+    $this->betreff = '';
+    $this->gewerk = '';
+    $this->raeume = '';
+    $this->anzahl_teilnehmer = null;
+    $this->verwendete_anwendungen = '';
+    $this->weitere_wichtige_informationen = '';
+    $this->personalisierte_pruefungsbenutzer = 'Nein';
+    $this->sperre_pruefungsbenutzer_ab_datum = '';
+    $this->sperre_pruefungsbenutzer_ab_uhrzeit = '';
+    $this->loeschung_pruefungsbenutzer_ab_datum = '';
+    $this->loeschung_pruefungsbenutzer_ab_uhrzeit = '';
+};
+
 $submit = function (): void {
     if ($this->category->form === TicketFormType::ItGestuetztePruefung && $this->pruefung_step !== 3) {
         return;
@@ -365,14 +402,18 @@ $submit = function (): void {
         && is_array($this->pruefungstermine)
         && count($this->pruefungstermine) > 1;
 
+    $needsPersonalisierteBenutzer = $this->category->form === TicketFormType::ItGestuetztePruefung
+        && $this->personalisierte_pruefungsbenutzer === 'Ja';
+
     $rules = app(TicketFormValidation::class)->rulesFor(
         $this->category->form,
         (bool) $this->meisterbrief,
         $isMultiPruefung,
+        $needsPersonalisierteBenutzer,
     );
     $validated = $this->validate($rules);
 
-    if ($this->category->form === TicketFormType::ItGestuetztePruefung) {
+    if ($this->category->form === TicketFormType::ItGestuetztePruefung && ! PruefungTourDemo::isActive()) {
         $terminIds = $isMultiPruefung
             ? collect($validated['pruefungstermine'])->pluck('pruefungstermin_id')->map(fn ($id): int => (int) $id)
             : collect([(int) $validated['pruefungstermin_id']]);

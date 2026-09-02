@@ -22,6 +22,7 @@ class TicketBodyBuilder
         'ansprechpartner' => 'Ansprechpartner',
         'verwendete_anwendungen' => 'Verwendete Anwendungen',
         'weitere_wichtige_informationen' => 'Weitere Wichtige Informationen',
+        'personalisierte_pruefungsbenutzer' => 'Personalisierte Prüfungsbenutzer',
         'sperre_pruefungsbenutzer_ab' => 'Sperre Prüfungsbenutzer ab',
         'loeschung_pruefungsbenutzer_ab' => 'Löschung Prüfungsbenutzer ab',
     ];

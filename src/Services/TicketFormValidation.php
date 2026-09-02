@@ -18,6 +18,7 @@ class TicketFormValidation
     public function filterFormData(TicketFormType $form, array $data): array
     {
         if ($form === TicketFormType::ItGestuetztePruefung) {
+            $data = $this->normalizePersonalisiertePruefungsbenutzer($data);
             $data = $this->combineOptionalDateTimes($data);
             $data = $this->normalizePruefungstermine($data);
         }
@@ -97,41 +98,33 @@ class TicketFormValidation
                 'standort',
                 'ansprechpartner',
             ],
-            TicketFormType::ItGestuetztePruefung => $this->isMultiPruefung($data)
-                ? [
-                    'betreff',
-                    'pruefung_id',
-                    'pruefungstermine',
-                    'datum',
-                    'gewerk',
-                    'ansprechpartner',
-                    'verwendete_anwendungen',
-                    'weitere_wichtige_informationen',
-                    'sperre_pruefungsbenutzer_ab',
-                    'loeschung_pruefungsbenutzer_ab',
-                ]
-                : [
-                    'betreff',
-                    'pruefungstermin_id',
-                    'pruefung_id',
-                    'datum',
-                    'gewerk',
-                    'raeume',
-                    'anzahl_teilnehmer',
-                    'ansprechpartner',
-                    'verwendete_anwendungen',
-                    'weitere_wichtige_informationen',
-                    'sperre_pruefungsbenutzer_ab',
-                    'loeschung_pruefungsbenutzer_ab',
-                ],
+            TicketFormType::ItGestuetztePruefung => array_values(array_filter([
+                'betreff',
+                'pruefung_id',
+                $this->isMultiPruefung($data) ? 'pruefungstermine' : 'pruefungstermin_id',
+                $this->isMultiPruefung($data) ? null : 'raeume',
+                $this->isMultiPruefung($data) ? null : 'anzahl_teilnehmer',
+                'datum',
+                'gewerk',
+                'ansprechpartner',
+                'verwendete_anwendungen',
+                'weitere_wichtige_informationen',
+                'personalisierte_pruefungsbenutzer',
+                'sperre_pruefungsbenutzer_ab',
+                'loeschung_pruefungsbenutzer_ab',
+            ])),
         };
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function rulesFor(TicketFormType $form, bool $meisterbrief = false, bool $multiPruefung = false): array
-    {
+    public function rulesFor(
+        TicketFormType $form,
+        bool $meisterbrief = false,
+        bool $multiPruefung = false,
+        bool $personalisiertePruefungsbenutzer = false,
+    ): array {
         return match ($form) {
             TicketFormType::ItSupport,
             TicketFormType::Hausmeisterservice,
@@ -187,40 +180,49 @@ class TicketFormValidation
                 'standort' => ['required', 'integer', 'exists:standorts,id'],
                 'ansprechpartner' => ['required', 'integer', 'exists:users,id'],
             ], $this->attachmentRules()),
-            TicketFormType::ItGestuetztePruefung => $multiPruefung
-                ? [
-                    'betreff' => ['required', 'string', 'max:200'],
-                    'pruefung_id' => ['required', 'integer'],
-                    'pruefungstermine' => ['required', 'array', 'min:2'],
-                    'pruefungstermine.*.pruefungstermin_id' => ['required', 'integer'],
-                    'pruefungstermine.*.raeume' => ['required', 'string', 'max:500'],
-                    'pruefungstermine.*.anzahl_teilnehmer' => ['required', 'integer', 'min:0'],
-                    'datum' => ['required', 'date'],
-                    'gewerk' => ['required', 'string', 'max:500'],
-                    'ansprechpartner' => ['required', 'string', 'max:500'],
-                    'verwendete_anwendungen' => ['required', 'string', 'max:3000'],
-                    'weitere_wichtige_informationen' => ['nullable', 'string', 'max:3000'],
-                    'sperre_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:sperre_pruefungsbenutzer_ab_uhrzeit'],
-                    'sperre_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:sperre_pruefungsbenutzer_ab_datum'],
-                    'loeschung_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:loeschung_pruefungsbenutzer_ab_uhrzeit'],
-                    'loeschung_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:loeschung_pruefungsbenutzer_ab_datum'],
-                ]
-                : [
-                    'betreff' => ['required', 'string', 'max:200'],
-                    'pruefungstermin_id' => ['required', 'integer'],
-                    'pruefung_id' => ['required', 'integer'],
-                    'datum' => ['required', 'date'],
-                    'gewerk' => ['required', 'string', 'max:500'],
-                    'raeume' => ['required', 'string', 'max:500'],
-                    'anzahl_teilnehmer' => ['required', 'integer', 'min:0'],
-                    'ansprechpartner' => ['required', 'string', 'max:500'],
-                    'verwendete_anwendungen' => ['required', 'string', 'max:3000'],
-                    'weitere_wichtige_informationen' => ['nullable', 'string', 'max:3000'],
-                    'sperre_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:sperre_pruefungsbenutzer_ab_uhrzeit'],
-                    'sperre_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:sperre_pruefungsbenutzer_ab_datum'],
-                    'loeschung_pruefungsbenutzer_ab_datum' => ['nullable', 'date', 'required_with:loeschung_pruefungsbenutzer_ab_uhrzeit'],
-                    'loeschung_pruefungsbenutzer_ab_uhrzeit' => ['nullable', 'date_format:H:i', 'required_with:loeschung_pruefungsbenutzer_ab_datum'],
-                ],
+            TicketFormType::ItGestuetztePruefung => array_merge(
+                $multiPruefung
+                    ? [
+                        'betreff' => ['required', 'string', 'max:200'],
+                        'pruefung_id' => ['required', 'integer'],
+                        'pruefungstermine' => ['required', 'array', 'min:2'],
+                        'pruefungstermine.*.pruefungstermin_id' => ['required', 'integer'],
+                        'pruefungstermine.*.raeume' => ['required', 'string', 'max:500'],
+                        'pruefungstermine.*.anzahl_teilnehmer' => ['required', 'integer', 'min:0'],
+                        'datum' => ['required', 'date'],
+                        'gewerk' => ['required', 'string', 'max:500'],
+                        'ansprechpartner' => ['required', 'string', 'max:500'],
+                        'verwendete_anwendungen' => ['required', 'string', 'max:3000'],
+                        'weitere_wichtige_informationen' => ['nullable', 'string', 'max:3000'],
+                        'personalisierte_pruefungsbenutzer' => ['required', Rule::in(['Ja', 'Nein'])],
+                    ]
+                    : [
+                        'betreff' => ['required', 'string', 'max:200'],
+                        'pruefungstermin_id' => ['required', 'integer'],
+                        'pruefung_id' => ['required', 'integer'],
+                        'datum' => ['required', 'date'],
+                        'gewerk' => ['required', 'string', 'max:500'],
+                        'raeume' => ['required', 'string', 'max:500'],
+                        'anzahl_teilnehmer' => ['required', 'integer', 'min:0'],
+                        'ansprechpartner' => ['required', 'string', 'max:500'],
+                        'verwendete_anwendungen' => ['required', 'string', 'max:3000'],
+                        'weitere_wichtige_informationen' => ['nullable', 'string', 'max:3000'],
+                        'personalisierte_pruefungsbenutzer' => ['required', Rule::in(['Ja', 'Nein'])],
+                    ],
+                $personalisiertePruefungsbenutzer
+                    ? [
+                        'sperre_pruefungsbenutzer_ab_datum' => ['required', 'date'],
+                        'sperre_pruefungsbenutzer_ab_uhrzeit' => ['required', 'date_format:H:i'],
+                        'loeschung_pruefungsbenutzer_ab_datum' => ['required', 'date'],
+                        'loeschung_pruefungsbenutzer_ab_uhrzeit' => ['required', 'date_format:H:i'],
+                    ]
+                    : [
+                        'sperre_pruefungsbenutzer_ab_datum' => ['nullable'],
+                        'sperre_pruefungsbenutzer_ab_uhrzeit' => ['nullable'],
+                        'loeschung_pruefungsbenutzer_ab_datum' => ['nullable'],
+                        'loeschung_pruefungsbenutzer_ab_uhrzeit' => ['nullable'],
+                    ],
+            ),
         };
     }
 
@@ -268,8 +270,42 @@ class TicketFormValidation
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
+    private function normalizePersonalisiertePruefungsbenutzer(array $data): array
+    {
+        $value = $data['personalisierte_pruefungsbenutzer'] ?? 'Nein';
+        $data['personalisierte_pruefungsbenutzer'] = $value === 'Ja' ? 'Ja' : 'Nein';
+
+        if ($data['personalisierte_pruefungsbenutzer'] !== 'Ja') {
+            unset(
+                $data['sperre_pruefungsbenutzer_ab'],
+                $data['sperre_pruefungsbenutzer_ab_datum'],
+                $data['sperre_pruefungsbenutzer_ab_uhrzeit'],
+                $data['loeschung_pruefungsbenutzer_ab'],
+                $data['loeschung_pruefungsbenutzer_ab_datum'],
+                $data['loeschung_pruefungsbenutzer_ab_uhrzeit'],
+            );
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
     private function combineOptionalDateTimes(array $data): array
     {
+        if (($data['personalisierte_pruefungsbenutzer'] ?? 'Nein') !== 'Ja') {
+            unset(
+                $data['sperre_pruefungsbenutzer_ab_datum'],
+                $data['sperre_pruefungsbenutzer_ab_uhrzeit'],
+                $data['loeschung_pruefungsbenutzer_ab_datum'],
+                $data['loeschung_pruefungsbenutzer_ab_uhrzeit'],
+            );
+
+            return $data;
+        }
+
         foreach (['sperre_pruefungsbenutzer_ab', 'loeschung_pruefungsbenutzer_ab'] as $key) {
             $date = $data[$key.'_datum'] ?? null;
             $time = $data[$key.'_uhrzeit'] ?? null;
