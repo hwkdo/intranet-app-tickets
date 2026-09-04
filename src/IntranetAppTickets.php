@@ -6,10 +6,12 @@ namespace Hwkdo\IntranetAppTickets;
 
 use Hwkdo\IntranetAppBase\Data\ManualDefinition;
 use Hwkdo\IntranetAppBase\Data\NotificationTypeDefinition;
+use Hwkdo\IntranetAppBase\Data\SearchActionDefinition;
 use Hwkdo\IntranetAppBase\Data\TourDefinition;
 use Hwkdo\IntranetAppBase\Interfaces\IntranetAppInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesManualsInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesNotificationsInterface;
+use Hwkdo\IntranetAppBase\Interfaces\ProvidesSearchActionsInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesTasksInterface;
 use Hwkdo\IntranetAppBase\Interfaces\ProvidesToursInterface;
 use Hwkdo\IntranetAppTickets\Data\AppSettings;
@@ -18,7 +20,7 @@ use Hwkdo\IntranetAppTickets\Tasks\PendingApprovalsTaskProvider;
 use Hwkdo\IntranetAppTickets\Tasks\UnreadTicketsTaskProvider;
 use Illuminate\Support\Collection;
 
-class IntranetAppTickets implements IntranetAppInterface, ProvidesManualsInterface, ProvidesNotificationsInterface, ProvidesTasksInterface, ProvidesToursInterface
+class IntranetAppTickets implements IntranetAppInterface, ProvidesManualsInterface, ProvidesNotificationsInterface, ProvidesSearchActionsInterface, ProvidesTasksInterface, ProvidesToursInterface
 {
     public static function app_name(): string
     {
@@ -151,6 +153,24 @@ class IntranetAppTickets implements IntranetAppInterface, ProvidesManualsInterfa
                 sort: 100,
                 version: 1,
                 isPrimary: true,
+            ),
+        ];
+    }
+
+    public static function searchActions(): array
+    {
+        return [
+            new SearchActionDefinition(
+                key: 'tickets.create',
+                title: 'Neues Ticket',
+                keywords: ['ticket erstellen', 'neues ticket', 'ticket anlegen', 'ticket aufmachen'],
+                routeName: 'apps.tickets.create.index',
+                appIdentifier: self::identifier(),
+                appName: self::app_name(),
+                icon: self::app_icon(),
+                permission: 'see-app-tickets',
+                subtitle: self::app_name(),
+                sort: 100,
             ),
         ];
     }
