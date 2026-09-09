@@ -30,6 +30,9 @@ Route::middleware(['web', 'auth', 'can:see-app-tickets'])->group(function () {
     Volt::route('apps/tickets/requests/{ticketRequest}', 'apps.tickets.requests.show')->name('apps.tickets.requests.show');
     Volt::route('apps/tickets/info', 'apps.tickets.info')->name('apps.tickets.info');
 
+    Volt::route('apps/tickets/settings/notifications', 'apps.tickets.settings.notifications')
+        ->name('apps.tickets.settings.notifications');
+
     Volt::route('apps/tickets/manual', 'apps.tickets.manual')->name('apps.tickets.manual');
 
 

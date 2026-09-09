@@ -18,9 +18,11 @@
             'icon' => 'check-badge',
             'description' => 'Offene Ticket-Genehmigungen bearbeiten',
             'buttonText' => 'Genehmigungen öffnen',
-        ]] : []),        ['label' => 'Bedienungsanleitung', 'href' => route('apps.tickets.manual'), 'icon' => 'book-open', 'description' => 'Ausführliche Anleitung zur Tickets-App', 'buttonText' => 'Anleitung öffnen'],
+        ]] : []),
+        ['label' => 'Benachrichtigungen', 'href' => route('apps.tickets.settings.notifications'), 'icon' => 'bell', 'description' => 'Benachrichtigungen dieser App konfigurieren', 'buttonText' => 'Benachrichtigungen öffnen'],
+        ['label' => 'Bedienungsanleitung', 'href' => route('apps.tickets.manual'), 'icon' => 'book-open', 'description' => 'Ausführliche Anleitung zur Tickets-App', 'buttonText' => 'Anleitung öffnen'],
         ['label' => 'App-Info', 'href' => route('apps.tickets.info'), 'icon' => 'information-circle', 'description' => 'Installierte Version und Release-Historie', 'buttonText' => 'App-Info anzeigen'],
-        ['label' => 'Webhooks', 'href' => route('apps.tickets.webhooks.index'), 'icon' => 'bell', 'description' => 'Eingegangene Zammad-Webhooks', 'buttonText' => 'Webhooks öffnen', 'permission' => 'manage-app-tickets'],
+        ['label' => 'Webhooks', 'href' => route('apps.tickets.webhooks.index'), 'icon' => 'signal', 'description' => 'Eingegangene Zammad-Webhooks', 'buttonText' => 'Webhooks öffnen', 'permission' => 'manage-app-tickets'],
         ['label' => 'Admin', 'href' => route('apps.tickets.admin.index'), 'icon' => 'shield-check', 'description' => 'Administrationsbereich verwalten', 'buttonText' => 'Admin öffnen', 'permission' => 'manage-app-tickets']
     ];
 
