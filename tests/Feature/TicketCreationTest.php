@@ -17,13 +17,10 @@ use Hwkdo\IntranetAppTickets\Services\TicketListService;
 use Hwkdo\IntranetAppTickets\Services\TicketSubmissionService;
 use Hwkdo\IntranetAppTickets\Services\ZammadTicketService;
 use Hwkdo\IntranetAppTickets\Services\ZammadUserResolver;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Volt\Volt;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-
-uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->seed(TicketCategorySeeder::class);
@@ -52,6 +49,7 @@ test('it ticket without approval is dispatched via zammad', function () {
 
     $this->mock(ZammadTicketService::class, function ($mock): void {
         $mock->shouldReceive('createTicket')->once()->andReturn(555);
+        $mock->shouldReceive('addTagsToTicket')->once();
     });
 
     $request = app(TicketSubmissionService::class)->submit(
@@ -111,6 +109,15 @@ test('marketing ticket stays pending until approved', function () {
     $category->update(['zammad_group_id' => 2]);
     $category->approverRoles()->sync([$role->id]);
 
+    $this->mock(ZammadUserResolver::class, function ($mock): void {
+        $mock->shouldReceive('resolveCustomerId')->andReturn(99);
+    });
+
+    $this->mock(ZammadTicketService::class, function ($mock): void {
+        $mock->shouldReceive('createTicket')->once()->andReturn(777);
+        $mock->shouldReceive('addTagsToTicket')->once();
+    });
+
     $request = app(TicketSubmissionService::class)->submit(
         category: $category,
         formData: [
@@ -130,18 +137,12 @@ test('marketing ticket stays pending until approved', function () {
 
     expect($request->status)->toBe(TicketRequestStatus::Pending);
 
-    $this->mock(ZammadUserResolver::class, function ($mock): void {
-        $mock->shouldReceive('resolveCustomerId')->andReturn(99);
-    });
-
-    $this->mock(ZammadTicketService::class, function ($mock): void {
-        $mock->shouldReceive('createTicket')->once()->andReturn(777);
-    });
-
     app(TicketApprovalService::class)->approve($request, $approver);
 
-    expect($request->fresh()->status)->toBe(TicketRequestStatus::Dispatched)
-        ->and($request->zammad_ticket_id)->toBe(777);
+    $dispatched = $request->fresh();
+
+    expect($dispatched->status)->toBe(TicketRequestStatus::Dispatched)
+        ->and($dispatched->zammad_ticket_id)->toBe(777);
 });
 
 test('reject keeps request with rejected status', function () {
@@ -275,6 +276,7 @@ test('it gestuetzte pruefung ticket is dispatched via zammad without approval', 
 
     $this->mock(ZammadTicketService::class, function ($mock): void {
         $mock->shouldReceive('createTicket')->once()->andReturn(888);
+        $mock->shouldReceive('addTagsToTicket')->once();
     });
 
     $request = app(TicketSubmissionService::class)->submit(
@@ -638,6 +640,7 @@ test('it gestuetzte pruefung multi ticket body lists rooms separately', function
 
     $this->mock(ZammadTicketService::class, function ($mock): void {
         $mock->shouldReceive('createTicket')->once()->andReturn(889);
+        $mock->shouldReceive('addTagsToTicket')->once();
     });
 
     $request = app(TicketSubmissionService::class)->submit(

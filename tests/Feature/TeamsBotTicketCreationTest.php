@@ -412,7 +412,7 @@ it('creates a zammad ticket for the forwarded message author in a direct message
         ->and($request->body)->toContain('Der Nutzer meldet, dass sein Laptop nicht mehr startet.')
         ->and($request->body)->toContain('Originaltext aus Microsoft Teams:')
         ->and($request->body)->toContain('Weitergeleitete Nachricht von Lubritz, Markus:')
-        ->and($request->body)->toContain('Erstellt für: Lubritz, Markus')
+        ->and($request->body)->toContain('Erstellt für: Markus Lubritz')
         ->and($request->body)->toContain('Erstellt von: Max Mustermann');
 });
 
