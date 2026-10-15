@@ -8,6 +8,7 @@ use Hwkdo\IntranetAppBase\Data\BackgroundActivityDefinition;
 use Hwkdo\IntranetAppTickets\IntranetAppTickets;
 use Hwkdo\IntranetAppTickets\Jobs\CreateTicketFromTeamsMessageJob;
 use Hwkdo\IntranetAppTickets\Mail\TicketCreatedMail;
+use Hwkdo\IntranetAppTickets\Webhooks\Jobs\ZammadWebhookJob;
 
 final class TicketsBackgroundActivities
 {
@@ -28,6 +29,7 @@ final class TicketsBackgroundActivities
                 job: CreateTicketFromTeamsMessageJob::class,
                 sort: 10,
             ),
+            BackgroundActivityDefinition::queued(key: 'tickets.zammad-webhook', label: 'Webhook: Zammad', appIdentifier: $id, appName: $name, job: ZammadWebhookJob::class, description: 'Verarbeitet eingehende Zammad-Webhooks.', sort: 15),
             BackgroundActivityDefinition::mail(
                 key: 'tickets.mail-created',
                 label: 'Mail: Ticket erstellt',
