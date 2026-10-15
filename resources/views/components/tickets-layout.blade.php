@@ -23,6 +23,7 @@
         ['label' => 'Bedienungsanleitung', 'href' => route('apps.tickets.manual'), 'icon' => 'book-open', 'description' => 'Ausführliche Anleitung zur Tickets-App', 'buttonText' => 'Anleitung öffnen'],
         ['label' => 'App-Info', 'href' => route('apps.tickets.info'), 'icon' => 'information-circle', 'description' => 'Installierte Version und Release-Historie', 'buttonText' => 'App-Info anzeigen'],
         ['label' => 'Webhooks', 'href' => route('apps.tickets.webhooks.index'), 'icon' => 'signal', 'description' => 'Eingegangene Zammad-Webhooks', 'buttonText' => 'Webhooks öffnen', 'permission' => 'manage-app-tickets'],
+        ['label' => 'Hintergrund', 'href' => route('apps.tickets.admin.background-activities'), 'icon' => 'clock', 'description' => 'Geplante Tasks, Jobs und Versand', 'buttonText' => 'Hintergrund öffnen', 'permission' => 'manage-app-tickets'],
         ['label' => 'Admin', 'href' => route('apps.tickets.admin.index'), 'icon' => 'shield-check', 'description' => 'Administrationsbereich verwalten', 'buttonText' => 'Admin öffnen', 'permission' => 'manage-app-tickets']
     ];
 

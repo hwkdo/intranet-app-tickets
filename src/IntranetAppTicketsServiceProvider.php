@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTickets;
 
+use Hwkdo\IntranetAppTeamsBot\Events\TeamsBotMessageReceived;
 use Hwkdo\IntranetAppTickets\Commands\SeedTicketCategoriesCommand;
 use Hwkdo\IntranetAppTickets\Listeners\HandleTeamsBotTicketCommand;
 use Hwkdo\IntranetAppTickets\Livewire\Admin\ZammadUserRoles;
@@ -33,7 +34,6 @@ use Hwkdo\IntranetAppTickets\Services\ZammadUserRoleService;
 use Hwkdo\IntranetAppTickets\Services\ZammadWebhookOutcomeRecorder;
 use Hwkdo\IntranetAppTickets\Webhooks\Jobs\ZammadWebhookJob;
 use Hwkdo\IntranetAppTickets\Webhooks\SignatureValidators\ZammadSignatureValidator;
-use Hwkdo\IntranetAppTeamsBot\Events\TeamsBotMessageReceived;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;

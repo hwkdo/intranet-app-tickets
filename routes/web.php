@@ -72,3 +72,9 @@ Route::middleware(['web', 'auth', 'can:manage-app-tickets'])->group(function () 
 
     Volt::route('apps/tickets/webhooks/{id}/payload', 'apps.tickets.webhooks.show-payload')->name('apps.tickets.webhooks.show-payload');
 });
+
+Route::middleware(['web', 'auth', 'can:manage-app-tickets'])->group(function (): void {
+    Volt::route('apps/tickets/admin/background-activities', 'apps.tickets.admin.background-activities')
+        ->name('apps.tickets.admin.background-activities');
+});
+

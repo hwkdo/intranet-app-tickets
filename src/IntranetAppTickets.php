@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Hwkdo\IntranetAppTickets;
 
+use Hwkdo\IntranetAppBase\Interfaces\ProvidesBackgroundActivitiesInterface;
+use Hwkdo\IntranetAppTickets\Background\TicketsBackgroundActivities;
 use Hwkdo\IntranetAppBase\Data\ManualDefinition;
 use Hwkdo\IntranetAppBase\Data\NotificationTypeDefinition;
 use Hwkdo\IntranetAppBase\Data\SearchActionDefinition;
@@ -20,7 +22,7 @@ use Hwkdo\IntranetAppTickets\Tasks\PendingApprovalsTaskProvider;
 use Hwkdo\IntranetAppTickets\Tasks\UnreadTicketsTaskProvider;
 use Illuminate\Support\Collection;
 
-class IntranetAppTickets implements IntranetAppInterface, ProvidesManualsInterface, ProvidesNotificationsInterface, ProvidesSearchActionsInterface, ProvidesTasksInterface, ProvidesToursInterface
+class IntranetAppTickets implements IntranetAppInterface, ProvidesBackgroundActivitiesInterface, ProvidesManualsInterface, ProvidesNotificationsInterface, ProvidesSearchActionsInterface, ProvidesTasksInterface, ProvidesToursInterface
 {
     public static function app_name(): string
     {
@@ -174,4 +176,11 @@ class IntranetAppTickets implements IntranetAppInterface, ProvidesManualsInterfa
             ),
         ];
     }
+
+    public static function backgroundActivities(): array
+    {
+        return TicketsBackgroundActivities::definitions();
+    }
+
+
 }
