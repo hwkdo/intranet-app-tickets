@@ -2,15 +2,13 @@
 
 declare(strict_types=1);
 
-use Hwkdo\IntranetAppTickets\Http\Controllers\TicketAttachmentController;
 use Hwkdo\IntranetAppTickets\Http\Controllers\PruefungTourDemoController;
+use Hwkdo\IntranetAppTickets\Http\Controllers\TicketAttachmentController;
 use Hwkdo\IntranetAppTickets\Http\Controllers\TicketTourDemoController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
-
 Route::webhooks('webhooks/zammad', 'tickets-zammad');
-
 
 Route::middleware(['web', 'auth', 'can:see-app-tickets'])->group(function () {
     Volt::route('apps/tickets', 'apps.tickets.index')->name('apps.tickets.index');
@@ -35,7 +33,6 @@ Route::middleware(['web', 'auth', 'can:see-app-tickets'])->group(function () {
 
     Volt::route('apps/tickets/manual', 'apps.tickets.manual')->name('apps.tickets.manual');
 
-
     Route::post('apps/tickets/tour/demo/enable', [TicketTourDemoController::class, 'enable'])
         ->name('apps.tickets.tour.demo.enable');
 
@@ -51,11 +48,9 @@ Route::middleware(['web', 'auth', 'can:see-app-tickets'])->group(function () {
     Route::post('apps/tickets/tour/pruefung-demo/disable', [PruefungTourDemoController::class, 'disable'])
         ->name('apps.tickets.tour.pruefung-demo.disable');
 
-
     Volt::route('apps/tickets/{ticketId}', 'apps.tickets.show')
         ->whereNumber('ticketId')
         ->name('apps.tickets.show');
-
 
     Route::get(
         'apps/tickets/{ticketId}/articles/{articleId}/attachments/{attachmentId}',
@@ -64,7 +59,6 @@ Route::middleware(['web', 'auth', 'can:see-app-tickets'])->group(function () {
         ->name('apps.tickets.attachments.download');
 });
 
-
 Route::middleware(['web', 'auth', 'can:manage-app-tickets'])->group(function () {
     Volt::route('apps/tickets/admin', 'apps.tickets.admin.index')->name('apps.tickets.admin.index');
 
@@ -72,9 +66,3 @@ Route::middleware(['web', 'auth', 'can:manage-app-tickets'])->group(function () 
 
     Volt::route('apps/tickets/webhooks/{id}/payload', 'apps.tickets.webhooks.show-payload')->name('apps.tickets.webhooks.show-payload');
 });
-
-Route::middleware(['web', 'auth', 'can:manage-app-tickets'])->group(function (): void {
-    Volt::route('apps/tickets/admin/background-activities', 'apps.tickets.admin.background-activities')
-        ->name('apps.tickets.admin.background-activities');
-});
-

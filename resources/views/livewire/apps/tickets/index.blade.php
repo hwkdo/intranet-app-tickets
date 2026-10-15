@@ -243,6 +243,9 @@ title('Tickets - Übersicht');
                         <span>Tickets werden geladen…</span>
                     </div>
                 </div>
+                <flux:tab.panel name="open" :selected="$filter === 'open'" class="!pt-0"></flux:tab.panel>
+                <flux:tab.panel name="closed" :selected="$filter === 'closed'" class="!pt-0"></flux:tab.panel>
+                <flux:tab.panel name="all" :selected="$filter === 'all'" class="!pt-0"></flux:tab.panel>
             </flux:tab.group>
 
             <div wire:loading wire:target="filter, search" class="space-y-3">
