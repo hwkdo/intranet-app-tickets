@@ -46,6 +46,12 @@ $hasApiKey = computed(fn (): bool => $this->apiKey !== '');
                 'apiKey' => $this->apiKey,
                 'baseUrl' => $this->baseUrl,
                 'useMcpTools' => true,
+                'suggestions' => [
+                    'Zeig mir meine offenen Tickets.',
+                    'Wie ist der aktuelle Stand zu meinem letzten Ticket?',
+                    'Erstelle ein Ticket: Mein Drucker druckt nicht mehr.',
+                    'In welcher Kategorie melde ich ein Problem mit meinem Account?',
+                ],
             ])
         @else
             <flux:card class="glass-card">
