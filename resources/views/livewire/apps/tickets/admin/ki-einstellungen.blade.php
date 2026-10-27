@@ -197,7 +197,7 @@ $save = function (): void {
         <div>
             <flux:heading size="sm" class="mb-3">Tickets-KI-Chat</flux:heading>
             <flux:text class="mb-4 text-sm text-zinc-500">
-                Interaktiver Chat (prism-chat / Open Web UI) mit MCP-Server-Unterstützung für Ticket-Übersicht, Details und Erstellung.
+                Interaktiver Chat (prism-chat / Open Web UI) mit MCP-Server-Unterstützung für Ticket-Übersicht, Details, Erstellung und öffentliche Kundennotizen in bestehenden Tickets.
                 Der System-Prompt für den OpenWebUI-Agenten wird dort konfiguriert; der MCP-Server ist unter <code>/mcp/apps/tickets</code> erreichbar.
             </flux:text>
 

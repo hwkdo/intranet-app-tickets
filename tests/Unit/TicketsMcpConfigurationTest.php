@@ -7,6 +7,7 @@ use Hwkdo\IntranetAppTickets\IntranetAppTickets;
 use Hwkdo\IntranetAppTickets\Mcp\Servers\TicketsServer;
 use Hwkdo\IntranetAppTickets\Mcp\Tools\TicketDetailAnzeigenTool;
 use Hwkdo\IntranetAppTickets\Mcp\Tools\TicketErstellenTool;
+use Hwkdo\IntranetAppTickets\Mcp\Tools\TicketNotizSchreibenTool;
 use Hwkdo\IntranetAppTickets\Mcp\Tools\TicketsAnzeigenTool;
 
 it('registriert die MCP tools in der erwarteten Reihenfolge', function (): void {
@@ -20,6 +21,7 @@ it('registriert die MCP tools in der erwarteten Reihenfolge', function (): void 
         TicketsAnzeigenTool::class,
         TicketDetailAnzeigenTool::class,
         TicketErstellenTool::class,
+        TicketNotizSchreibenTool::class,
     ]);
 });
 
@@ -34,8 +36,10 @@ it('hat klare server instructions fuer den ticket flow', function (): void {
         ->toContain('tickets_anzeigen')
         ->toContain('ticket_detail_anzeigen')
         ->toContain('ticket_erstellen')
+        ->toContain('ticket_notiz_schreiben')
         ->toContain('filter="offen"')
-        ->toContain('benutzer_suchen');
+        ->toContain('benutzer_suchen')
+        ->toContain('öffentliche Kundennotiz');
 });
 
 it('stellt den tickets MCP server in der app konfiguration bereit', function (): void {

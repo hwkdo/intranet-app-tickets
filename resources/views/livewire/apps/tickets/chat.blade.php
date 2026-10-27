@@ -50,6 +50,7 @@ $hasApiKey = computed(fn (): bool => $this->apiKey !== '');
                     'Zeig mir meine offenen Tickets.',
                     'Wie ist der aktuelle Stand zu meinem letzten Ticket?',
                     'Erstelle ein Ticket: Mein Drucker druckt nicht mehr.',
+                    'Schreib in mein letztes offenes Ticket eine Antwort an den Bearbeiter.',
                     'In welcher Kategorie melde ich ein Problem mit meinem Account?',
                 ],
             ])
