@@ -11,13 +11,16 @@ use Hwkdo\IntranetAppTickets\Data\AppSettings;
 use Hwkdo\IntranetAppTickets\Enums\TeamsTicketAiProvider;
 use Hwkdo\IntranetAppTickets\Services\TicketsAppSettingsStore;
 use Illuminate\Validation\Rule;
-use function Livewire\Volt\{computed, mount, state};
+use function Livewire\Volt\{computed, mount, state, updated};
 
 state([
     'aiTextProviderOverride' => '',
     'aiTextModelOverride' => '',
     'aiImageProviderOverride' => '',
     'aiImageModelOverride' => '',
+    'aiImageEditModelOverride' => '',
+    'aiClassificationProviderOverride' => '',
+    'aiClassificationModelOverride' => '',
     'teamsTicketAiEnabled' => true,
     'teamsTicketAiProvider' => 'langdock',
     'teamsTicketAiModelOpenWebUi' => '',
@@ -32,12 +35,22 @@ mount(function (): void {
     $this->aiTextModelOverride = $settings->textModelOverride() ?? '';
     $this->aiImageProviderOverride = $settings->aiImageProviderOverride?->value ?? '';
     $this->aiImageModelOverride = $settings->imageModelOverride() ?? '';
+    $this->aiImageEditModelOverride = $settings->imageEditModelOverride() ?? '';
+    $this->aiClassificationProviderOverride = $settings->aiClassificationProviderOverride?->value ?? '';
+    $this->aiClassificationModelOverride = $settings->classificationModelOverride() ?? '';
     $this->teamsTicketAiEnabled = $settings->teamsTicketAiEnabled;
     $this->teamsTicketAiProvider = $settings->teamsTicketAiProvider->value;
     $this->teamsTicketAiModelOpenWebUi = $settings->teamsTicketAiModelOpenWebUi;
     $this->teamsTicketAiModelLangdock = $settings->teamsTicketAiModelLangdock;
     $this->openWebUiModel = $settings->openWebUiModel;
 });
+
+updated([
+    'aiImageProviderOverride' => function (): void {
+        $this->aiImageModelOverride = '';
+        $this->aiImageEditModelOverride = '';
+    },
+]);
 
 $baseAiTextSummary = computed(function (): string {
     $base = app(IntranetBaseAiConfigSourceInterface::class);
@@ -53,6 +66,13 @@ $baseAiImageSummary = computed(function (): string {
     return $base->imageProvider()->label().' / '.$model;
 });
 
+$baseAiClassificationSummary = computed(function (): string {
+    $base = app(IntranetBaseAiConfigSourceInterface::class);
+    $model = $base->classificationModel() ?? 'Provider-Standard';
+
+    return $base->classificationProvider()->label().' / '.$model;
+});
+
 $effectiveAiTextSummary = computed(function (): string {
     $resolved = app(AiConfigResolverInterface::class)->resolve('tickets', AiCapability::Text);
 
@@ -65,12 +85,21 @@ $effectiveAiImageSummary = computed(function (): string {
     return $resolved->provider->label().' / '.($resolved->model ?? 'Provider-Standard');
 });
 
+$effectiveAiClassificationSummary = computed(function (): string {
+    $resolved = app(AiConfigResolverInterface::class)->resolve('tickets', AiCapability::Classification);
+
+    return $resolved->provider->label().' / '.($resolved->model ?? 'Provider-Standard');
+});
+
 $save = function (): void {
     $this->validate([
         'aiTextProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
         'aiTextModelOverride' => 'nullable|string|max:100',
         'aiImageProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
         'aiImageModelOverride' => 'nullable|string|max:100',
+        'aiImageEditModelOverride' => 'nullable|string|max:150',
+        'aiClassificationProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
+        'aiClassificationModelOverride' => 'nullable|string|max:150',
         'teamsTicketAiEnabled' => 'boolean',
         'teamsTicketAiProvider' => ['required', 'string', Rule::enum(TeamsTicketAiProvider::class)],
         'teamsTicketAiModelOpenWebUi' => 'nullable|string|max:255',
@@ -101,6 +130,9 @@ $save = function (): void {
         'aiTextModelOverride' => $blankToNull($this->aiTextModelOverride),
         'aiImageProviderOverride' => $parseProviderOverride($this->aiImageProviderOverride),
         'aiImageModelOverride' => $blankToNull($this->aiImageModelOverride),
+        'aiImageEditModelOverride' => $blankToNull($this->aiImageEditModelOverride),
+        'aiClassificationProviderOverride' => $parseProviderOverride($this->aiClassificationProviderOverride),
+        'aiClassificationModelOverride' => $blankToNull($this->aiClassificationModelOverride),
         'teamsTicketAiEnabled' => $this->teamsTicketAiEnabled,
         'teamsTicketAiProvider' => TeamsTicketAiProvider::from($this->teamsTicketAiProvider),
         'teamsTicketAiModelOpenWebUi' => trim($this->teamsTicketAiModelOpenWebUi),
@@ -135,7 +167,8 @@ $save = function (): void {
                 <flux:callout.heading>Globale KI-Standards</flux:callout.heading>
                 <flux:callout.text>
                     Text: <strong>{{ $this->baseAiTextSummary }}</strong><br>
-                    Bilder: <strong>{{ $this->baseAiImageSummary }}</strong>
+                    Bilder: <strong>{{ $this->baseAiImageSummary }}</strong><br>
+                    Klassifikation: <strong>{{ $this->baseAiClassificationSummary }}</strong>
                     — änderbar unter Manager → Base Settings.
                 </flux:callout.text>
             </flux:callout>
@@ -145,12 +178,17 @@ $save = function (): void {
                 ai-text-model-override="aiTextModelOverride"
                 ai-image-provider-override="aiImageProviderOverride"
                 ai-image-model-override="aiImageModelOverride"
+                ai-image-edit-model-override="aiImageEditModelOverride"
+                :image-provider="$aiImageProviderOverride"
+                ai-classification-provider-override="aiClassificationProviderOverride"
+                ai-classification-model-override="aiClassificationModelOverride"
             />
 
             <flux:text class="mt-4 text-sm text-zinc-500">
                 Aktuell wirksam für Tickets:
                 Text <strong>{{ $this->effectiveAiTextSummary }}</strong>,
-                Bilder <strong>{{ $this->effectiveAiImageSummary }}</strong>.
+                Bilder <strong>{{ $this->effectiveAiImageSummary }}</strong>,
+                Klassifikation <strong>{{ $this->effectiveAiClassificationSummary }}</strong>.
             </flux:text>
         </div>
 
