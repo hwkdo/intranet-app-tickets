@@ -9,5 +9,12 @@
     </flux:select>
 @endif
 <flux:input wire:model="betreff2" label="Betreff" required />
+<flux:input
+    wire:model="ablagebezeichnung"
+    label="Ablagebezeichnung"
+    description:trailing="Mit welcher Bezeichnung soll der Vertrag abgelegt werden?"
+    maxlength="200"
+    required
+/>
 <flux:textarea wire:model="inhalt" label="Kurzbeschreibung" rows="8" maxlength="3000" required />
 @include('intranet-app-tickets::livewire.apps.tickets.create.partials.attachments')

@@ -230,3 +230,53 @@ test('it gestuetzte pruefung multi body lists rooms then shared fields', functio
         ->and($body)->toContain('Personalisierte Prüfungsbenutzer: Nein')
         ->and($body)->not->toContain('Räume:');
 });
+
+test('vertragsmanagement keeps the filing name and requires it', function (): void {
+    $validation = app(TicketFormValidation::class);
+
+    $filtered = $validation->filterFormData(TicketFormType::Vertragsmanagement, [
+        'betreff' => 'Vertragspruefung',
+        'vertragstyp' => 'Neuvertrag',
+        'betreff2' => 'Rahmenvertrag Müller',
+        'ablagebezeichnung' => 'Rahmenvertrag Müller GmbH 2026',
+        'inhalt' => 'Bitte prüfen und ablegen.',
+        'meisterbrief' => false,
+    ]);
+
+    expect($filtered)->toBe([
+        'betreff' => 'Vertragspruefung',
+        'vertragstyp' => 'Neuvertrag',
+        'betreff2' => 'Rahmenvertrag Müller',
+        'ablagebezeichnung' => 'Rahmenvertrag Müller GmbH 2026',
+        'inhalt' => 'Bitte prüfen und ablegen.',
+    ]);
+
+    $rules = $validation->rulesFor(TicketFormType::Vertragsmanagement);
+
+    $validator = validator([
+        'betreff' => 'Vertragsgestaltung',
+        'betreff2' => 'Neuer Vertrag',
+        'inhalt' => 'Kurzbeschreibung',
+    ], $rules);
+
+    expect($validator->fails())->toBeTrue()
+        ->and($validator->errors()->has('ablagebezeichnung'))->toBeTrue();
+});
+
+test('vertragsmanagement body leads with the filing name', function (): void {
+    $validation = app(TicketFormValidation::class);
+    $builder = app(TicketBodyBuilder::class);
+
+    $formData = $validation->filterFormData(TicketFormType::Vertragsmanagement, [
+        'betreff' => 'Vertragspruefung',
+        'vertragstyp' => 'Bestandsvertrag',
+        'betreff2' => 'Rahmenvertrag Müller',
+        'ablagebezeichnung' => 'Rahmenvertrag Müller GmbH 2026',
+        'inhalt' => 'Bitte prüfen und ablegen.',
+    ]);
+
+    $body = $builder->build('Bitte prüfen und ablegen.', $formData);
+
+    expect($body)->toBe("Ablagebezeichnung: Rahmenvertrag Müller GmbH 2026\n\nBitte prüfen und ablegen.\n\nVertragstyp: Bestandsvertrag")
+        ->and($builder->buildSubject('Vertragspruefung', 'Rahmenvertrag Müller'))->toBe('Vertragspruefung (Rahmenvertrag Müller)');
+});

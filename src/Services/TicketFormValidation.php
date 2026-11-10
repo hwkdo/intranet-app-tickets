@@ -75,6 +75,7 @@ class TicketFormValidation
                 'betreff',
                 'vertragstyp',
                 'betreff2',
+                'ablagebezeichnung',
                 'inhalt',
             ],
             TicketFormType::Zollauktion => [
@@ -157,6 +158,7 @@ class TicketFormValidation
                 'betreff' => ['required', 'string', 'max:100'],
                 'vertragstyp' => ['nullable', 'string', 'max:100'],
                 'betreff2' => ['required', 'string', 'max:150'],
+                'ablagebezeichnung' => ['required', 'string', 'max:200'],
                 'inhalt' => ['required', 'string', 'max:3000'],
             ], $this->attachmentRules(required: true)),
             TicketFormType::Zollauktion => array_merge([

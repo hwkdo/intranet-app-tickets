@@ -25,6 +25,8 @@ class TicketBodyBuilder
         'personalisierte_pruefungsbenutzer' => 'Personalisierte Prüfungsbenutzer',
         'sperre_pruefungsbenutzer_ab' => 'Sperre Prüfungsbenutzer ab',
         'loeschung_pruefungsbenutzer_ab' => 'Löschung Prüfungsbenutzer ab',
+        'ablagebezeichnung' => 'Ablagebezeichnung',
+        'vertragstyp' => 'Vertragstyp',
     ];
 
     /**
@@ -41,11 +43,20 @@ class TicketBodyBuilder
         ?string $standortName = null,
         ?string $ansprechpartnerName = null,
     ): string {
-        $body = trim($baseContent);
+        $filingName = isset($formData['ablagebezeichnung']) ? trim((string) $formData['ablagebezeichnung']) : '';
+
+        $body = '';
+
+        if ($filingName !== '') {
+            $body = $this->appendLine($body, self::FIELD_LABELS['ablagebezeichnung'].': '.$filingName);
+        }
+
+        $body = $this->appendLine($body, trim($baseContent));
 
         $defaultExclude = [
             'betreff',
             'betreff2',
+            'ablagebezeichnung',
             'inhalt',
             'ticket_fuer',
             'on_behalf_of_user_id',

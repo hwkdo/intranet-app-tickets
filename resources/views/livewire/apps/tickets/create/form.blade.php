@@ -47,6 +47,7 @@ state([
     'binden' => '',
     'sortieren' => '',
     'vertragstyp' => '',
+    'ablagebezeichnung' => '',
     'anzahl' => null,
     'etikettennummer' => '',
     'foerderung' => 'Ja',
