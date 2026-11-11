@@ -64,6 +64,7 @@ state(['activeTab' => 'hintergrundbild'])->url(as: 'tab');
                         'aiTextModelOverride',
                         'aiImageProviderOverride',
                         'aiImageModelOverride',
+                        'aiImageEditProviderOverride',
                         'aiImageEditModelOverride',
                         'aiClassificationProviderOverride',
                         'aiClassificationModelOverride',

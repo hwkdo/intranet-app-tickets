@@ -18,6 +18,7 @@ state([
     'aiTextModelOverride' => '',
     'aiImageProviderOverride' => '',
     'aiImageModelOverride' => '',
+    'aiImageEditProviderOverride' => '',
     'aiImageEditModelOverride' => '',
     'aiClassificationProviderOverride' => '',
     'aiClassificationModelOverride' => '',
@@ -35,6 +36,7 @@ mount(function (): void {
     $this->aiTextModelOverride = $settings->textModelOverride() ?? '';
     $this->aiImageProviderOverride = $settings->aiImageProviderOverride?->value ?? '';
     $this->aiImageModelOverride = $settings->imageModelOverride() ?? '';
+    $this->aiImageEditProviderOverride = $settings->aiImageEditProviderOverride?->value ?? '';
     $this->aiImageEditModelOverride = $settings->imageEditModelOverride() ?? '';
     $this->aiClassificationProviderOverride = $settings->aiClassificationProviderOverride?->value ?? '';
     $this->aiClassificationModelOverride = $settings->classificationModelOverride() ?? '';
@@ -48,6 +50,8 @@ mount(function (): void {
 updated([
     'aiImageProviderOverride' => function (): void {
         $this->aiImageModelOverride = '';
+    },
+    'aiImageEditProviderOverride' => function (): void {
         $this->aiImageEditModelOverride = '';
     },
 ]);
@@ -61,9 +65,11 @@ $baseAiTextSummary = computed(function (): string {
 
 $baseAiImageSummary = computed(function (): string {
     $base = app(IntranetBaseAiConfigSourceInterface::class);
-    $model = $base->imageModel() ?? 'Provider-Standard';
+    $generate = $base->imageModel() ?? 'Provider-Standard';
+    $edit = $base->imageEditModel() ?? 'Provider-Standard';
 
-    return $base->imageProvider()->label().' / '.$model;
+    return 'Generate '.$base->imageProvider()->label().' / '.$generate
+        .', Edit '.$base->imageEditProvider()->label().' / '.$edit;
 });
 
 $baseAiClassificationSummary = computed(function (): string {
@@ -81,8 +87,13 @@ $effectiveAiTextSummary = computed(function (): string {
 
 $effectiveAiImageSummary = computed(function (): string {
     $resolved = app(AiConfigResolverInterface::class)->resolve('tickets', AiCapability::Image);
+    $settings = app(TicketsAppSettingsStore::class)->current();
+    $editProvider = $settings->imageEditProviderOverride()
+        ?? app(IntranetBaseAiConfigSourceInterface::class)->imageEditProvider();
+    $editModel = app(AiConfigResolverInterface::class)->resolveImageEditModel('tickets') ?? 'Provider-Standard';
 
-    return $resolved->provider->label().' / '.($resolved->model ?? 'Provider-Standard');
+    return 'Generate '.$resolved->provider->label().' / '.($resolved->model ?? 'Provider-Standard')
+        .', Edit '.$editProvider->label().' / '.$editModel;
 });
 
 $effectiveAiClassificationSummary = computed(function (): string {
@@ -97,6 +108,7 @@ $save = function (): void {
         'aiTextModelOverride' => 'nullable|string|max:100',
         'aiImageProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
         'aiImageModelOverride' => 'nullable|string|max:100',
+        'aiImageEditProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
         'aiImageEditModelOverride' => 'nullable|string|max:150',
         'aiClassificationProviderOverride' => ['nullable', 'string', Rule::enum(AiProvider::class)],
         'aiClassificationModelOverride' => 'nullable|string|max:150',
@@ -130,6 +142,7 @@ $save = function (): void {
         'aiTextModelOverride' => $blankToNull($this->aiTextModelOverride),
         'aiImageProviderOverride' => $parseProviderOverride($this->aiImageProviderOverride),
         'aiImageModelOverride' => $blankToNull($this->aiImageModelOverride),
+        'aiImageEditProviderOverride' => $parseProviderOverride($this->aiImageEditProviderOverride),
         'aiImageEditModelOverride' => $blankToNull($this->aiImageEditModelOverride),
         'aiClassificationProviderOverride' => $parseProviderOverride($this->aiClassificationProviderOverride),
         'aiClassificationModelOverride' => $blankToNull($this->aiClassificationModelOverride),
@@ -178,8 +191,10 @@ $save = function (): void {
                 ai-text-model-override="aiTextModelOverride"
                 ai-image-provider-override="aiImageProviderOverride"
                 ai-image-model-override="aiImageModelOverride"
+                ai-image-edit-provider-override="aiImageEditProviderOverride"
                 ai-image-edit-model-override="aiImageEditModelOverride"
                 :image-provider="$aiImageProviderOverride"
+                :image-edit-provider="$aiImageEditProviderOverride"
                 ai-classification-provider-override="aiClassificationProviderOverride"
                 ai-classification-model-override="aiClassificationModelOverride"
             />
